@@ -182,3 +182,75 @@ BEGIN
   DropUserIfExists('accountant');
 END;
 /
+
+-- Creating the Sales Representative user
+CREATE USER sales_rep IDENTIFIED BY SalesRepPassword00;
+-- Creating the sales_rep_role
+CREATE ROLE sales_rep_role;
+
+-- Granting privileges to the sales_rep_role
+GRANT CREATE SESSION TO sales_rep_role;
+GRANT SELECT, INSERT ON Customer TO sales_rep_role;
+GRANT SELECT, INSERT ON Address TO sales_rep_role;
+GRANT SELECT ON Product TO sales_rep_role;
+GRANT SELECT, INSERT ON Orders TO sales_rep_role;
+GRANT SELECT, INSERT ON Item_Orders TO sales_rep_role;
+GRANT SELECT ON Current_Inventory TO sales_rep_role;
+GRANT SELECT ON Low_Stock TO sales_rep_role;
+GRANT SELECT ON Customer_Order_History TO sales_rep_role;
+
+-- Grant the role to the sales_rep user
+GRANT sales_rep_role TO sales_rep;
+
+
+-- Creating the Manager user
+CREATE USER manager IDENTIFIED BY ManPassword00;
+GRANT CREATE SESSION TO manager;
+
+CREATE ROLE manager_role;
+
+-- Granting privileges to manager_role
+GRANT SELECT, INSERT, UPDATE ON Customer TO manager_role;
+GRANT SELECT, INSERT, UPDATE ON Address TO manager_role;
+GRANT SELECT, INSERT, UPDATE ON Employee TO manager_role;
+GRANT SELECT, INSERT, UPDATE ON Orders TO manager_role;
+GRANT SELECT, INSERT, UPDATE ON Item_Orders TO manager_role;
+GRANT SELECT ON Product TO manager_role;
+GRANT SELECT ON Current_Inventory TO manager_role;
+GRANT SELECT ON Low_Stock TO manager_role;
+GRANT SELECT ON Customer_Order_History TO manager_role;
+GRANT SELECT ON Employee_Performance TO manager_role;
+GRANT manager_role TO manager;
+
+-- Creating the inventory_clerk_role
+CREATE ROLE inventory_clerk_role;
+
+-- Granting privileges to inventory_clerk_role
+GRANT SELECT, INSERT, UPDATE ON Product TO inventory_clerk_role;
+GRANT SELECT ON Purchases TO inventory_clerk_role;
+GRANT SELECT, INSERT, UPDATE ON Vendor TO inventory_clerk_role;
+GRANT SELECT ON Current_Inventory TO inventory_clerk_role;
+GRANT SELECT ON Low_Stock TO inventory_clerk_role;
+
+-- Creating the inventory_clerk user and granting the role
+CREATE USER inventory_clerk IDENTIFIED BY ClerkPassword00;
+GRANT CREATE SESSION TO inventory_clerk;
+GRANT inventory_clerk_role TO inventory_clerk;
+
+
+-- Creating the accountant_role
+CREATE ROLE accountant_role;
+
+-- Granting privileges to accountant_role
+GRANT SELECT, INSERT, UPDATE ON Purchases TO accountant_role;
+GRANT SELECT ON Orders TO accountant_role;
+GRANT SELECT ON Item_Orders TO accountant_role;
+GRANT SELECT ON Product_Sales TO accountant_role;
+GRANT SELECT ON Low_Stock TO accountant_role;
+GRANT SELECT ON Weekly_Sales TO accountant_role;
+GRANT SELECT ON Weekly_Purchases TO accountant_role;
+
+-- Creating the accountant user and granting the role
+CREATE USER accountant IDENTIFIED BY AccountPassword00;
+GRANT CREATE SESSION TO accountant;
+GRANT accountant_role TO accountant;
