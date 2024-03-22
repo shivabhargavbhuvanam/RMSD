@@ -142,3 +142,43 @@ SELECT e.EMPLOYEE_ID, e.FIRST_NAME, e.LAST_NAME, COUNT(o.ORDER_ID) AS TOTAL_ORDE
 FROM Employee e
 JOIN Orders o ON e.EMPLOYEE_ID = o.EMPLOYEE_ID
 GROUP BY e.EMPLOYEE_ID, e.FIRST_NAME, e.LAST_NAME;
+
+
+DECLARE
+  user_exists EXCEPTION;
+  role_exists EXCEPTION;
+  PRAGMA EXCEPTION_INIT(user_exists, -01918); -- Oracle error code for "user not found"
+  PRAGMA EXCEPTION_INIT(role_exists, -01924); -- Oracle error code for "role not granted or does not exist"
+
+  PROCEDURE DropUserIfExists(user_name IN VARCHAR2) IS
+  BEGIN
+    EXECUTE IMMEDIATE 'DROP USER ' || user_name || ' CASCADE';
+    DBMS_OUTPUT.PUT_LINE('User ' || user_name || ' dropped');
+  EXCEPTION
+    WHEN user_exists THEN
+      DBMS_OUTPUT.PUT_LINE('User ' || user_name || ' does not exist, will be created');
+  END;
+
+  PROCEDURE DropRoleIfExists(role_name IN VARCHAR2) IS
+  BEGIN
+    EXECUTE IMMEDIATE 'DROP ROLE ' || role_name;
+    DBMS_OUTPUT.PUT_LINE('Role ' || role_name || ' dropped');
+  EXCEPTION
+    WHEN role_exists THEN
+      DBMS_OUTPUT.PUT_LINE('Role ' || role_name || ' does not exist, will be created');
+  END;
+
+BEGIN
+  -- Dropping roles if they exist
+  DropRoleIfExists('sales_rep_role');
+  DropRoleIfExists('manager_role');
+  DropRoleIfExists('inventory_clerk_role');
+  DropRoleIfExists('accountant_role');
+
+  -- Dropping users if they exist
+  DropUserIfExists('sales_rep');
+  DropUserIfExists('manager');
+  DropUserIfExists('inventory_clerk');
+  DropUserIfExists('accountant');
+END;
+/
