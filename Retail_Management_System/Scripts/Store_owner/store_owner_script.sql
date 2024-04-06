@@ -574,6 +574,140 @@ BEGIN
 END;
 /
 
+CREATE OR REPLACE PROCEDURE ADD_CUSTOMER_RECORD(
+    pi_first_name     IN CUSTOMER.FIRST_NAME%TYPE,
+    pi_last_name      IN CUSTOMER.LAST_NAME%TYPE,
+    pi_phone          IN CUSTOMER.PHONE_NUMBER%TYPE,
+    pi_email          IN CUSTOMER.EMAIL%TYPE,
+    pi_house_number   IN ADDRESS.HOUSE_NUMBER%TYPE,
+    pi_street         IN ADDRESS.STREET%TYPE,
+    pi_city           IN ADDRESS.CITY%TYPE,
+    pi_state          IN ADDRESS.STATE%TYPE,
+    pi_country        IN ADDRESS.COUNTRY%TYPE,
+    pi_postal_code    IN ADDRESS.POSTAL_CODE%TYPE
+)
+AS
+    v_address_id ADDRESS.ADDRESS_ID%TYPE;
+    invalid_input EXCEPTION;
+BEGIN
+    -- Validate input arguments
+    IF pi_first_name IS NULL OR pi_last_name IS NULL OR pi_email IS NULL 
+       OR pi_phone IS NULL OR pi_house_number IS NULL OR pi_street IS NULL 
+       OR pi_city IS NULL OR pi_state IS NULL 
+       OR pi_country IS NULL OR pi_postal_code IS NULL THEN
+        RAISE invalid_input;
+    END IF;
+
+    -- Insert into Address table
+    INSERT INTO ADDRESS (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE)
+    VALUES (pi_house_number, pi_street, pi_city, pi_state, pi_country, pi_postal_code)
+    RETURNING ADDRESS_ID INTO v_address_id;
+
+    -- Insert into Customer table
+    INSERT INTO CUSTOMER (FIRST_NAME, LAST_NAME, ADDRESS_ID, PHONE_NUMBER, EMAIL)
+    VALUES (pi_first_name, pi_last_name, v_address_id, pi_phone, pi_email);
+
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Customer record added successfully');
+
+EXCEPTION
+    WHEN invalid_input THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error: Invalid input arguments');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE(SQLERRM); -- Display the specific SQL error
+END ADD_CUSTOMER_RECORD;
+/
+
+-- Grant execute permission to appropriate roles or users
+GRANT EXECUTE ON ADD_CUSTOMER_RECORD TO manager_role;
+
+-- For John Doe
+BEGIN
+    ADD_CUSTOMER_RECORD(
+        pi_first_name     => 'John',
+        pi_last_name      => 'Doe',
+        pi_phone          => '555-1234',
+        pi_email          => 'johndoe@email.com',
+        pi_house_number  => 567,
+        pi_street        => 'Fifth St',
+        pi_city          => 'Mass avenue',
+        pi_state         => 'Tenesse',
+        pi_country       => 'United States',
+        pi_postal_code   => 20133
+    );
+END;
+/
+
+-- For Jane Smith
+BEGIN
+    ADD_CUSTOMER_RECORD(
+        pi_first_name     => 'Jane',
+        pi_last_name      => 'Smith',
+        pi_phone          => '555-2345',
+        pi_email          => 'janesmith@email.com',
+        pi_house_number  => 456,
+        pi_street        => 'Main Street',
+        pi_city          => 'Anytown',
+        pi_state         => 'State',
+        pi_country       => 'United States',
+        pi_postal_code   => 12345
+    );
+END;
+/
+
+-- For Jim Bean
+BEGIN
+    ADD_CUSTOMER_RECORD(
+        pi_first_name     => 'Jim',
+        pi_last_name      => 'Bean',
+        pi_phone          => '555-3456',
+        pi_email          => 'jimbean@email.com',
+        pi_house_number  => 345,
+        pi_street        => 'Fourth St',
+        pi_city          => 'East cottage st',
+        pi_state         => 'Nebraska',
+        pi_country       => 'United States',
+        pi_postal_code   => 02122
+    );
+END;
+/
+
+-- For James Barnes
+BEGIN
+    ADD_CUSTOMER_RECORD(
+        pi_first_name     => 'James',
+        pi_last_name      => 'Barnes',
+        pi_phone          => '555-4567',
+        pi_email          => 'jamesbarnes@email.com',
+        pi_house_number  => 234,
+        pi_street        => 'Third St',
+        pi_city          => 'Elder st',
+        pi_state         => 'California',
+        pi_country       => 'United States',
+        pi_postal_code   => 12345
+    );
+END;
+/
+
+-- For Jake Bond
+BEGIN
+    ADD_CUSTOMER_RECORD(
+        pi_first_name     => 'Jake',
+        pi_last_name      => 'Bond',
+        pi_phone          => '555-5678',
+        pi_email          => 'jakebond@email.com',
+        pi_house_number  => 123,
+        pi_street        => 'Main Street',
+        pi_city          => 'Springfield',
+        pi_state         => 'Massachusetts',
+        pi_country       => 'United States',
+        pi_postal_code   => 12345
+    );
+END;
+/
+
 
 -- Inserting data into the Address table
 INSERT INTO Address (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE) VALUES (101, 'Main St', 'Springfield', 'Massachusetts', 'United States', 12345);
@@ -581,14 +715,6 @@ INSERT INTO Address (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE) VA
 INSERT INTO Address (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE) VALUES (103, 'Third St', 'Elder st', 'California', 'United States', 34567);
 INSERT INTO Address (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE) VALUES (104, 'Fourth St', 'East cottage st', 'Nebraska', 'United States', 02122);
 INSERT INTO Address (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE) VALUES (105, 'Fifth St', 'Mass avenue', 'Tenesse', 'United States', 20133);
-
-
--- Inserting data into the Customer table
-INSERT INTO Customer (FIRST_NAME, LAST_NAME, ADDRESS_ID, PHONE_NUMBER, EMAIL) VALUES ('John', 'Doe', 1, '555-1234', 'johndoe@email.com');
-INSERT INTO Customer (FIRST_NAME, LAST_NAME, ADDRESS_ID, PHONE_NUMBER, EMAIL) VALUES ('Jane', 'Smith', 2, '555-2345', 'janesmith@email.com');
-INSERT INTO Customer (FIRST_NAME, LAST_NAME, ADDRESS_ID, PHONE_NUMBER, EMAIL) VALUES ('Jim', 'Bean', 3, '555-3456', 'jimbean@email.com');
-INSERT INTO Customer (FIRST_NAME, LAST_NAME, ADDRESS_ID, PHONE_NUMBER, EMAIL) VALUES ('James', 'Barnes', 4, '555-4567', 'jamesbarnes@email.com');
-INSERT INTO Customer (FIRST_NAME, LAST_NAME, ADDRESS_ID, PHONE_NUMBER, EMAIL) VALUES ('Jake', 'Bond', 5, '555-5678', 'jakebond@email.com');
 
 
 -- Inserting data into the Product table
