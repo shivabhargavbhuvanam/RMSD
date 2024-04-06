@@ -281,6 +281,186 @@ CREATE USER accountant IDENTIFIED BY AccountPassword00;
 GRANT CREATE SESSION TO accountant;
 GRANT accountant_role TO accountant;
 
+
+-- Procedures
+
+-- Procedure to add an employee record into the employee table
+create or replace PROCEDURE ADD_EMPLOYEE_RECORD(
+    pi_first_name       IN EMPLOYEE.first_name%TYPE,
+    pi_last_name        IN EMPLOYEE.last_name%TYPE,
+    pi_email            IN EMPLOYEE.email%TYPE,
+    pi_phone            IN EMPLOYEE.phone_number%TYPE,
+    pi_hiring_date      IN EMPLOYEE.hiring_date%TYPE,
+    pi_role             IN EMPLOYEE.role%TYPE,
+    pi_wage             IN EMPLOYEE.wage%TYPE,
+    pi_house_number     IN ADDRESS.house_number%TYPE,
+    pi_street           IN ADDRESS.street%TYPE,
+    pi_city             IN ADDRESS.city%TYPE,
+    pi_state            IN ADDRESS.state%type,
+    pi_country          IN ADDRESS.country%TYPE,
+    pi_postal_code      IN ADDRESS.postal_code%TYPE
+)
+AS
+    v_address_id ADDRESS.address_id%TYPE;
+    invalid_input EXCEPTION;
+
+BEGIN
+
+        -- Validate input arguments
+    IF pi_first_name IS NULL OR pi_last_name IS NULL OR pi_email IS NULL 
+        OR pi_phone IS NULL OR pi_hiring_date IS NULL 
+        OR pi_house_number IS NULL OR pi_street IS NULL OR pi_role IS NULL or pi_wage IS NULL
+        OR pi_city IS NULL OR pi_state IS NULL 
+        OR pi_country IS NULL OR pi_postal_code IS NULL THEN
+        RAISE invalid_input;
+    END IF;
+
+    -- Insert into Address table
+    INSERT INTO ADDRESS (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE)
+    VALUES (pi_house_number, pi_street, pi_city, pi_state, pi_country, pi_postal_code)
+    RETURNING ADDRESS_ID INTO v_address_id;
+
+    DBMS_OUTPUT.PUT_LINE('Employee address added successfully');
+
+    -- Insert into Employee table
+    INSERT INTO EMPLOYEE (FIRST_NAME, LAST_NAME, EMAIL, PHONE_NUMBER, HIRING_DATE, ROLE, WAGE, ADDRESS_ID)
+    VALUES (pi_first_name, pi_last_name, pi_email, pi_phone, pi_hiring_date, pi_role, pi_wage, v_address_id);
+
+    COMMIT;
+
+     DBMS_OUTPUT.PUT_LINE('Employee record added successfully');
+
+EXCEPTION
+    WHEN invalid_input THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error: Invalid input arguments');
+     WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error: Email already exists');
+
+END ADD_EMPLOYEE_RECORD;
+/
+
+GRANT EXECUTE ON ADD_EMPLOYEE_RECORD TO MANAGER_ROLE;
+
+
+BEGIN
+    ADD_EMPLOYEE_RECORD(
+        pi_first_name    => 'Jane',
+        pi_last_name     => 'Doe',
+        pi_email         => 'jane@email.com',
+        pi_phone         => '(857)555-6789',
+        pi_hiring_date   => SYSTIMESTAMP,
+        pi_role          => 'Accountant',
+        pi_wage          => 60000,
+        pi_house_number  => 123,
+        pi_street        => 'Main Street',
+        pi_city          => 'Boston',
+        pi_state         => 'Massachusetts',
+        pi_country       => 'United States',
+        pi_postal_code   => 12345
+    );
+END;
+/
+
+BEGIN
+    ADD_EMPLOYEE_RECORD(
+        pi_first_name    => 'James',
+        pi_last_name     => 'Carter',
+        pi_email         => 'carter@email.com',
+        pi_phone         => '(857)544-3789',
+        pi_hiring_date   => SYSTIMESTAMP,
+        pi_role          => 'Sales Rep',
+        pi_wage          => 50000,
+        pi_house_number  => 12,
+        pi_street        => 'Stowe Street',
+        pi_city          => 'Boston',
+        pi_state         => 'Massachusetts',
+        pi_country       => 'United States',
+        pi_postal_code   => 13245
+    );
+END;
+/
+
+BEGIN
+    ADD_EMPLOYEE_RECORD(
+        pi_first_name    => 'Charles',
+        pi_last_name     => 'Miller',
+        pi_email         => 'miller@email.com',
+        pi_phone         => '(857)544-4769',
+        pi_hiring_date   => SYSTIMESTAMP,
+        pi_role          => 'Inventory Clerk',
+        pi_wage          => 35000,
+        pi_house_number  => 18,
+        pi_street        => 'Adams Street',
+        pi_city          => 'Boston',
+        pi_state         => 'Massachusetts',
+        pi_country       => 'United States',
+        pi_postal_code   => 13245
+    );
+END;
+/
+
+BEGIN
+    ADD_EMPLOYEE_RECORD(
+        pi_first_name    => 'Rebecca',
+        pi_last_name     => 'Jones',
+        pi_email         => 'jonesrebecca@email.com',
+        pi_phone         => '(857)344-4659',
+        pi_hiring_date   => SYSTIMESTAMP,
+        pi_role          => 'Inventory Clerk',
+        pi_wage          => 35000,
+        pi_house_number  => 22,
+        pi_street        => 'JK Street',
+        pi_city          => 'Boston',
+        pi_state         => 'Massachusetts',
+        pi_country       => 'United States',
+        pi_postal_code   => 13245
+    );
+END;
+/
+
+BEGIN
+    ADD_EMPLOYEE_RECORD(
+        pi_first_name    => 'Marie',
+        pi_last_name     => 'Thomas',
+        pi_email         => 'thomas@email.com',
+        pi_phone         => '(855)364-6769',
+        pi_hiring_date   => SYSTIMESTAMP,
+        pi_role          => 'Sales rep',
+        pi_wage          => 66000,
+        pi_house_number  => 145,
+        pi_street        => 'Harlem Street',
+        pi_city          => 'Cambridge',
+        pi_state         => 'Massachusetts',
+        pi_country       => 'United States',
+        pi_postal_code   => 25245
+    );
+END;
+/
+
+BEGIN
+    ADD_EMPLOYEE_RECORD(
+        pi_first_name    => 'Marie',
+        pi_last_name     => 'Thomas',
+        pi_email         => 'thomas@email.com',
+        pi_phone         => '(855)364-6769',
+        pi_hiring_date   => SYSTIMESTAMP,
+        pi_role          => 'Sales rep',
+        pi_wage          => 66000,
+        pi_house_number  => 145,
+        pi_street        => 'Harlem Street',
+        pi_city          => 'Cambridge',
+        pi_state         => 'Massachusetts',
+        pi_country       => 'United States',
+        pi_postal_code   => 25245
+    );
+END;
+/
+
+
+
+
 -- Inserting data into the Address table
 INSERT INTO Address (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE) VALUES (101, 'Main St', 'Springfield', 'Massachusetts', 'United States', 12345);
 INSERT INTO Address (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE) VALUES (102, 'Second St', 'Brookefield', 'Texas', 'United States', 23456);
@@ -341,64 +521,3 @@ INSERT INTO Purchases (PURCHASE_DATE, VENDOR_ID, PRODUCT_ID, QUANTITY, TOTAL_PRI
 INSERT INTO Purchases (PURCHASE_DATE, VENDOR_ID, PRODUCT_ID, QUANTITY, TOTAL_PRICE) VALUES (TO_TIMESTAMP('2024-01-03 12:00:00', 'YYYY-MM-DD HH24:MI:SS'), 3, 3, 200, 200.00);
 INSERT INTO Purchases (PURCHASE_DATE, VENDOR_ID, PRODUCT_ID, QUANTITY, TOTAL_PRICE) VALUES (TO_TIMESTAMP('2024-01-03 12:00:00', 'YYYY-MM-DD HH24:MI:SS'), 4, 4, 150, 900.00);
 INSERT INTO Purchases (PURCHASE_DATE, VENDOR_ID, PRODUCT_ID, QUANTITY, TOTAL_PRICE) VALUES (TO_TIMESTAMP('2024-01-03 12:00:00', 'YYYY-MM-DD HH24:MI:SS'), 5, 5, 50, 1900.00);
-
-
--- Procedures
-
--- Procedure to add an employee record into the employee table
-create or replace PROCEDURE ADD_EMPLOYEE_RECORD(
-    pi_first_name       IN EMPLOYEE.first_name%TYPE,
-    pi_last_name        IN EMPLOYEE.last_name%TYPE,
-    pi_email            IN EMPLOYEE.email%TYPE,
-    pi_phone            IN EMPLOYEE.phone_number%TYPE,
-    pi_hiring_date      IN EMPLOYEE.hiring_date%TYPE,
-    pi_role             IN EMPLOYEE.role%TYPE,
-    pi_house_number     IN ADDRESS.house_number%TYPE,
-    pi_street           IN ADDRESS.street%TYPE,
-    pi_city             IN ADDRESS.city%TYPE,
-    pi_state            IN ADDRESS.state%type,
-    pi_country          IN ADDRESS.country%TYPE,
-    pi_postal_code      IN ADDRESS.postal_code%TYPE
-)
-AS
-    v_address_id ADDRESS.address_id%TYPE;
-    invalid_input EXCEPTION;
-
-BEGIN
-
-        -- Validate input arguments
-    IF pi_first_name IS NULL OR pi_last_name IS NULL OR pi_email IS NULL 
-        OR pi_phone IS NULL OR pi_hiring_date IS NULL 
-        OR pi_house_number IS NULL OR pi_street IS NULL OR pi_role IS NULL
-        OR pi_city IS NULL OR pi_state IS NULL 
-        OR pi_country IS NULL OR pi_postal_code IS NULL THEN
-        RAISE invalid_input;
-    END IF;
-
-    -- Insert into Address table
-    INSERT INTO ADDRESS (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE)
-    VALUES (pi_house_number, pi_street, pi_city, pi_state, pi_country, pi_postal_code)
-    RETURNING ADDRESS_ID INTO v_address_id;
-
-    DBMS_OUTPUT.PUT_LINE('Employee address added successfully');
-
-    -- Insert into Employee table
-    INSERT INTO EMPLOYEE (FIRST_NAME, LAST_NAME, EMAIL, PHONE_NUMBER, HIRING_DATE, ADDRESS_ID)
-    VALUES (pi_first_name, pi_last_name, pi_email, pi_phone, pi_hiring_date, v_address_id);
-
-    COMMIT;
-
-     DBMS_OUTPUT.PUT_LINE('Employee record added successfully');
-
-EXCEPTION
-    WHEN invalid_input THEN
-        ROLLBACK;
-        DBMS_OUTPUT.PUT_LINE('Error: Invalid input arguments');
-     WHEN OTHERS THEN
-        ROLLBACK;
-        DBMS_OUTPUT.PUT_LINE('Error has occured during prodecure execution');
-
-END ADD_EMPLOYEE_RECORD;
-/
-
-GRANT EXECUTE ON ADD_EMPLOYEE_RECORD TO MANAGER_ROLE;
