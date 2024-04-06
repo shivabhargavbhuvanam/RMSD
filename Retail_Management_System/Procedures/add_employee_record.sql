@@ -32,6 +32,8 @@ BEGIN
     VALUES (pi_house_number, pi_street, pi_city, pi_state, pi_country, pi_postal_code)
     RETURNING ADDRESS_ID INTO v_address_id;
 
+    DBMS_OUTPUT.PUT_LINE('Employee address added successfully');
+
     -- Insert into Employee table
     INSERT INTO EMPLOYEE (FIRST_NAME, LAST_NAME, EMAIL, PHONE_NUMBER, HIRING_DATE, ADDRESS_ID)
     VALUES (pi_first_name, pi_last_name, pi_email, pi_phone, pi_hiring_date, v_address_id);
