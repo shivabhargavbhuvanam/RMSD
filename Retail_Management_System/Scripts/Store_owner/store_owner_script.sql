@@ -458,7 +458,121 @@ BEGIN
 END;
 /
 
+CREATE OR REPLACE PROCEDURE ADD_VENDOR_RECORD(
+    pi_name             IN VENDOR.NAME%TYPE,
+    pi_email            IN VENDOR.EMAIL%TYPE,
+    pi_phone            IN VENDOR.PHONE_NUMBER%TYPE,
+    pi_house_number     IN ADDRESS.HOUSE_NUMBER%TYPE,
+    pi_street           IN ADDRESS.STREET%TYPE,
+    pi_city             IN ADDRESS.CITY%TYPE,
+    pi_state            IN ADDRESS.STATE%TYPE,
+    pi_country          IN ADDRESS.COUNTRY%TYPE,
+    pi_postal_code      IN ADDRESS.POSTAL_CODE%TYPE
+)
+AS
+    vendor_address_id ADDRESS.ADDRESS_ID%TYPE;
+    invalid_input EXCEPTION;
+BEGIN
+    IF pi_name IS NULL OR pi_email IS NULL OR pi_phone IS NULL
+        OR pi_house_number IS NULL OR pi_street IS NULL
+        OR pi_city IS NULL OR pi_state IS NULL
+        OR pi_country IS NULL OR pi_postal_code IS NULL THEN
+        RAISE invalid_input;
+    END IF;
+    
+    -- Insert into Address table
+    INSERT INTO ADDRESS (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE)
+    VALUES (pi_house_number, pi_street, pi_city, pi_state, pi_country, pi_postal_code)
+    RETURNING ADDRESS_ID INTO vendor_address_id;
+    DBMS_OUTPUT.PUT_LINE('Vendor address added successfully');
+    -- Insert into Vendor table
+    INSERT INTO VENDOR (NAME, EMAIL, PHONE_NUMBER, ADDRESS_ID)
+    VALUES (pi_name, pi_email, pi_phone, vendor_address_id); -- Corrected to use pi_name instead of name
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Vendor record added successfully');
+EXCEPTION
+    WHEN invalid_input THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error: Invalid input arguments');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error has occurred during procedure execution');
+    
+END ADD_VENDOR_RECORD;
+/
+  
+GRANT EXECUTE ON ADD_VENDOR_RECORD TO MANAGER_ROLE;
 
+BEGIN
+    ADD_VENDOR_RECORD(
+        pi_name     => 'vendor A',
+        pi_email         => 'vendor.a@example.com',
+        pi_phone         => '1234567890',
+        pi_house_number  => 123,
+        pi_street        => 'Main Street',
+        pi_city          => 'Springfield',
+        pi_state         => 'Massachusetts',
+        pi_country       => 'United States',
+        pi_postal_code   => 12345
+    );
+END;
+/
+BEGIN
+    ADD_VENDOR_RECORD(
+        pi_name     => 'vendor B',
+        pi_email         => 'vendor.b@example.com',
+        pi_phone         => '1234567891',
+        pi_house_number  => 234,
+        pi_street        => 'Third St',
+        pi_city          => 'Elder st',
+        pi_state         => 'California',
+        pi_country       => 'United States',
+        pi_postal_code   => 12345
+    );
+END;
+/
+BEGIN
+    ADD_VENDOR_RECORD(
+        pi_name     => 'vendor C',
+        pi_email         => 'vendor.c@example.com',
+        pi_phone         => '1234567892',
+        pi_house_number  => 345,
+        pi_street        => 'Fourth St',
+        pi_city          => 'East cottage st',
+        pi_state         => 'Nebraska',
+        pi_country       => 'United States',
+        pi_postal_code   => 02122
+    );
+END;
+/
+BEGIN
+    ADD_VENDOR_RECORD(
+        pi_name     => 'vendor D',
+        pi_email         => 'vendor.d@example.com',
+        pi_phone         => '1234567893',
+        pi_house_number  => 456,
+        pi_street        => 'Main Street',
+        pi_city          => 'Anytown',
+        pi_state         => 'State',
+        pi_country       => 'United States',
+        pi_postal_code   => 12345
+    );
+END;
+/
+BEGIN
+    ADD_VENDOR_RECORD(
+        pi_name     => 'vendor E',
+        pi_email         => 'vendor.e@example.com',
+        pi_phone         => '1234567894',
+        pi_house_number  => 567,
+        pi_street        => 'Fifth St',
+        pi_city          => 'Mass avenue',
+        pi_state         => 'Tenesse',
+        pi_country       => 'United States',
+        pi_postal_code   => 20133
+    );
+END;
+/
 
 
 -- Inserting data into the Address table
@@ -485,14 +599,6 @@ INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) VALUES ('Co
 INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) VALUES ('Shoes', 'Nike', 50, 39.99);
 
 
--- Inserting data into the Employee table
-INSERT INTO Employee (FIRST_NAME, LAST_NAME, ADDRESS_ID, EMAIL, PHONE_NUMBER, HIRING_DATE, ROLE, WAGE) VALUES ('Alice', 'Adams', 1, 'alice@email.com', '555-6789', TO_TIMESTAMP('2023-01-10 09:00:00', 'YYYY-MM-DD HH24:MI:SS'), 'Manager', 60000);
-INSERT INTO Employee (FIRST_NAME, LAST_NAME, ADDRESS_ID, EMAIL, PHONE_NUMBER, HIRING_DATE, ROLE, WAGE) VALUES ('Bob', 'Baker', 2, 'bob@email.com', '555-7890', TO_TIMESTAMP('2023-01-11 09:30:00', 'YYYY-MM-DD HH24:MI:SS'), 'Sales Rep', 40000);
-INSERT INTO Employee (FIRST_NAME, LAST_NAME, ADDRESS_ID, EMAIL, PHONE_NUMBER, HIRING_DATE, ROLE, WAGE) VALUES ('Carol', 'Clark', 3, 'carol@email.com', '555-7389', TO_TIMESTAMP('2023-01-11 09:30:00', 'YYYY-MM-DD HH24:MI:SS'), 'Inventory Clerk', 37000);
-INSERT INTO Employee (FIRST_NAME, LAST_NAME, ADDRESS_ID, EMAIL, PHONE_NUMBER, HIRING_DATE, ROLE, WAGE) VALUES ('Parker', 'Kent', 4, 'parker@email.com', '555-8910', TO_TIMESTAMP('2023-06-20 09:30:00', 'YYYY-MM-DD HH24:MI:SS'), 'Accountant', 39000);
-INSERT INTO Employee (FIRST_NAME, LAST_NAME, ADDRESS_ID, EMAIL, PHONE_NUMBER, HIRING_DATE, ROLE, WAGE) VALUES ('Steven', 'Potts', 5, 'steven@email.com', '555-9018', TO_TIMESTAMP('2023-10-20 09:30:00', 'YYYY-MM-DD HH24:MI:SS'), 'Accountant', 39000);
-
-
 -- Inserting data into the Orders table (assuming the date format 'YYYY-MM-DD HH24:MI:SS')
 INSERT INTO Orders (CUSTOMER_ID, EMPLOYEE_ID, ORDER_DATE) VALUES (1, 1, TO_TIMESTAMP('2024-03-20 10:00:00', 'YYYY-MM-DD HH24:MI:SS'));
 INSERT INTO Orders (CUSTOMER_ID, EMPLOYEE_ID, ORDER_DATE) VALUES (2, 2, TO_TIMESTAMP('2024-03-20 10:30:00', 'YYYY-MM-DD HH24:MI:SS'));
@@ -507,13 +613,6 @@ INSERT INTO Item_Orders (ORDER_ID, PRODUCT_ID, UNITS) VALUES (2, 2, 3);
 INSERT INTO Item_Orders (ORDER_ID, PRODUCT_ID, UNITS) VALUES (3, 3, 1);
 INSERT INTO Item_Orders (ORDER_ID, PRODUCT_ID, UNITS) VALUES (4, 5, 3);
 INSERT INTO Item_Orders (ORDER_ID, PRODUCT_ID, UNITS) VALUES (5, 2, 8);
-
--- Inserting data into the Vendor table
-INSERT INTO Vendor (NAME, ADDRESS_ID, PHONE_NUMBER, EMAIL) VALUES ('Vendor A', 1, '123-456-7890', 'vendorA@example.com');
-INSERT INTO Vendor (NAME, ADDRESS_ID, PHONE_NUMBER, EMAIL) VALUES ('Vendor B', 2, '123-456-7891', 'vendorB@example.com');
-INSERT INTO Vendor (NAME, ADDRESS_ID, PHONE_NUMBER, EMAIL) VALUES ('Vendor C', 3, '123-456-7892', 'vendorC@example.com');
-INSERT INTO Vendor (NAME, ADDRESS_ID, PHONE_NUMBER, EMAIL) VALUES ('Vendor D', 4, '123-456-7893', 'vendorD@example.com');
-INSERT INTO Vendor (NAME, ADDRESS_ID, PHONE_NUMBER, EMAIL) VALUES ('Vendor E', 5, '123-456-7894', 'vendorE@example.com');
 
 -- Inserting data into the Purchases table
 INSERT INTO Purchases (PURCHASE_DATE, VENDOR_ID, PRODUCT_ID, QUANTITY, TOTAL_PRICE) VALUES (TO_TIMESTAMP('2024-01-01 10:00:00', 'YYYY-MM-DD HH24:MI:SS'), 1, 1, 50, 12500.00);
