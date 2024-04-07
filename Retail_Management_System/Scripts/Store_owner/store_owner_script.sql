@@ -36,7 +36,7 @@ CREATE TABLE Customer (
     LAST_NAME VARCHAR2(30),
     ADDRESS_ID NUMBER,
     PHONE_NUMBER VARCHAR2(15),
-    EMAIL VARCHAR2(25)
+    EMAIL VARCHAR2(45)
 );
 
 CREATE TABLE Product (
@@ -65,7 +65,7 @@ CREATE TABLE Employee (
     FIRST_NAME VARCHAR2(30),
     LAST_NAME VARCHAR2(30),
     ADDRESS_ID NUMBER,
-    EMAIL VARCHAR2(25),
+    EMAIL VARCHAR2(45),
     PHONE_NUMBER VARCHAR2(15),
     HIRING_DATE TIMESTAMP,
     ROLE VARCHAR2(15),
@@ -709,14 +709,6 @@ END;
 /
 
 
--- Inserting data into the Address table
-INSERT INTO Address (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE) VALUES (101, 'Main St', 'Springfield', 'Massachusetts', 'United States', 12345);
-INSERT INTO Address (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE) VALUES (102, 'Second St', 'Brookefield', 'Texas', 'United States', 23456);
-INSERT INTO Address (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE) VALUES (103, 'Third St', 'Elder st', 'California', 'United States', 34567);
-INSERT INTO Address (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE) VALUES (104, 'Fourth St', 'East cottage st', 'Nebraska', 'United States', 02122);
-INSERT INTO Address (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE) VALUES (105, 'Fifth St', 'Mass avenue', 'Tenesse', 'United States', 20133);
-
-
 -- Inserting data into the Product table
 INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) VALUES ('Electronics', 'Smartphone', 50, 299.99);
 INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) VALUES ('Clothing', 'T-Shirt', 150, 19.99);
@@ -767,6 +759,7 @@ create or replace PROCEDURE UPDATE_EMPLOYEE_RECORD(
 AS
     v_address_id ADDRESS.address_id%TYPE;
     v_employee_id EMPLOYEE.employee_id%TYPE;
+    v_employee_count INTEGER;
     invalid_input EXCEPTION;
 
 BEGIN
@@ -797,11 +790,25 @@ BEGIN
         POSTAL_CODE  = COALESCE(pi_new_postal_code,POSTAL_CODE)
     WHERE ADDRESS_ID = v_address_id;
     
+    IF pi_new_email IS NOT NULL THEN
+        SELECT COUNT(*) INTO v_employee_count
+        FROM EMPLOYEE
+        WHERE EMAIL = pi_new_email;
+
+        IF v_employee_count > 0 THEN
+            DBMS_OUTPUT.PUT_LINE('New email provided already exists');
+            RAISE_APPLICATION_ERROR(-20002, 'New email provided already exists');
+        END IF;
+        IF v_employee_count = 0 THEN
+            UPDATE EMPLOYEE SET EMAIL = pi_new_email
+                WHERE EMAIL = pi_current_email;
+        END IF;
+    END IF;
+    
     UPDATE Employee
     SET FIRST_NAME   = COALESCE(pi_new_first_name, FIRST_NAME),
         LAST_NAME    = COALESCE(pi_new_last_name, LAST_NAME),
         PHONE_NUMBER = COALESCE(pi_new_phone, PHONE_NUMBER),
-        EMAIL        = COALESCE(pi_new_email, EMAIL),
         HIRING_DATE  = COALESCE(pi_new_hiring_date, HIRING_DATE),
         ROLE         = COALESCE(pi_new_role, ROLE),
         WAGE         = COALESCE(pi_new_wage, WAGE)
