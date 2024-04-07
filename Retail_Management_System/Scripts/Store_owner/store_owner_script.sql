@@ -995,3 +995,58 @@ EXCEPTION
         DBMS_OUTPUT.PUT_LINE('An error occurred: ' || SQLERRM);
 END DELETE_CUSTOMER_BY_EMAIL;
 /
+
+CREATE OR REPLACE FUNCTION VALIDATE_EMAIL(p_email IN VARCHAR2) RETURN BOOLEAN IS
+BEGIN
+    -- Check if the email is non-empty and contains '@' and '.'
+    IF p_email IS NOT NULL AND INSTR(p_email, '@') > 1 AND INSTR(p_email, '.', INSTR(p_email, '@')) > INSTR(p_email, '@') + 1 THEN
+        RETURN TRUE; -- Valid Email
+    ELSE
+        RETURN FALSE; -- Invalid Email
+    END IF;
+END VALIDATE_EMAIL;
+/
+
+CREATE OR REPLACE PROCEDURE UPDATE_CUSTOMER_EMAIL(
+    pi_current_email IN CUSTOMER.EMAIL%TYPE,
+    pi_new_email     IN CUSTOMER.EMAIL%TYPE
+)
+AS
+    customer_not_found EXCEPTION;
+    invalid_email EXCEPTION;
+BEGIN
+    -- Validate the new email
+    IF NOT VALIDATE_EMAIL(pi_new_email) THEN
+        RAISE invalid_email;
+    END IF;
+
+    -- Update Customer's Email
+    UPDATE CUSTOMER
+    SET EMAIL = pi_new_email
+    WHERE EMAIL = pi_current_email;
+
+    -- Check if the email was updated
+    IF SQL%ROWCOUNT = 0 THEN
+        RAISE customer_not_found;
+    END IF;
+
+    DBMS_OUTPUT.PUT_LINE('Customer email updated successfully');
+
+    COMMIT;
+EXCEPTION
+    WHEN invalid_email THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error: Provided new email is invalid');
+    WHEN customer_not_found THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error: Customer with the given email not found');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('An error occurred: ' || SQLERRM);
+END UPDATE_CUSTOMER_EMAIL;
+/
+
+GRANT EXECUTE ON UPDATE_CUSTOMER_EMAIL TO sales_rep_role;
+
+
+
