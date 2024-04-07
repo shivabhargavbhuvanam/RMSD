@@ -904,42 +904,45 @@ END UPDATE_VENDOR_RECORD;
 GRANT EXECUTE ON UPDATE_VENDOR_RECORD TO MANAGER_ROLE;
 
 CREATE OR REPLACE PROCEDURE UPDATE_CUSTOMER_RECORD(
-    pi_customer_id   IN CUSTOMER.CUSTOMER_ID%TYPE,
-    pi_first_name    IN CUSTOMER.FIRST_NAME%TYPE,
-    pi_last_name     IN CUSTOMER.LAST_NAME%TYPE,
-    pi_phone         IN CUSTOMER.PHONE_NUMBER%TYPE,
     pi_email         IN CUSTOMER.EMAIL%TYPE,
-    pi_house_number  IN ADDRESS.HOUSE_NUMBER%TYPE,
-    pi_street        IN ADDRESS.STREET%TYPE,
-    pi_city          IN ADDRESS.CITY%TYPE,
-    pi_state         IN ADDRESS.STATE%TYPE,
-    pi_country       IN ADDRESS.COUNTRY%TYPE,
-    pi_postal_code   IN ADDRESS.POSTAL_CODE%TYPE
+    pi_first_name    IN CUSTOMER.FIRST_NAME%TYPE DEFAULT NULL,
+    pi_last_name     IN CUSTOMER.LAST_NAME%TYPE DEFAULT NULL,
+    pi_phone         IN CUSTOMER.PHONE_NUMBER%TYPE DEFAULT NULL,
+    pi_house_number  IN ADDRESS.HOUSE_NUMBER%TYPE DEFAULT NULL,
+    pi_street        IN ADDRESS.STREET%TYPE DEFAULT NULL,
+    pi_city          IN ADDRESS.CITY%TYPE DEFAULT NULL,
+    pi_state         IN ADDRESS.STATE%TYPE DEFAULT NULL,
+    pi_country       IN ADDRESS.COUNTRY%TYPE DEFAULT NULL,
+    pi_postal_code   IN ADDRESS.POSTAL_CODE%TYPE DEFAULT NULL
 )
 AS
     v_address_id ADDRESS.ADDRESS_ID%TYPE;
     customer_not_found EXCEPTION;
 BEGIN
-    -- Check if customer exists
-    SELECT ADDRESS_ID INTO v_address_id FROM CUSTOMER WHERE CUSTOMER_ID = pi_customer_id;
+    -- Check if customer exists and get address ID
+    SELECT ADDRESS_ID INTO v_address_id FROM CUSTOMER WHERE EMAIL = pi_email;
 
-    -- Update Customer record
-    UPDATE CUSTOMER
-    SET FIRST_NAME = pi_first_name,
-        LAST_NAME = pi_last_name,
-        PHONE_NUMBER = pi_phone,
-        EMAIL = pi_email
-    WHERE CUSTOMER_ID = pi_customer_id;
+    -- Update Customer table
+    IF pi_first_name IS NOT NULL OR pi_last_name IS NOT NULL OR pi_phone IS NOT NULL THEN
+        UPDATE CUSTOMER
+        SET FIRST_NAME = COALESCE(pi_first_name, FIRST_NAME),
+            LAST_NAME = COALESCE(pi_last_name, LAST_NAME),
+            PHONE_NUMBER = COALESCE(pi_phone, PHONE_NUMBER)
+        WHERE EMAIL = pi_email;
+    END IF;
 
-    -- Update Address record
-    UPDATE ADDRESS
-    SET HOUSE_NUMBER = pi_house_number,
-        STREET = pi_street,
-        CITY = pi_city,
-        STATE = pi_state,
-        COUNTRY = pi_country,
-        POSTAL_CODE = pi_postal_code
-    WHERE ADDRESS_ID = v_address_id;
+    -- Update Address table
+    IF pi_house_number IS NOT NULL OR pi_street IS NOT NULL OR pi_city IS NOT NULL OR
+       pi_state IS NOT NULL OR pi_country IS NOT NULL OR pi_postal_code IS NOT NULL THEN
+        UPDATE ADDRESS
+        SET HOUSE_NUMBER = COALESCE(pi_house_number, HOUSE_NUMBER),
+            STREET = COALESCE(pi_street, STREET),
+            CITY = COALESCE(pi_city, CITY),
+            STATE = COALESCE(pi_state, STATE),
+            COUNTRY = COALESCE(pi_country, COUNTRY),
+            POSTAL_CODE = COALESCE(pi_postal_code, POSTAL_CODE)
+        WHERE ADDRESS_ID = v_address_id;
+    END IF;
 
     DBMS_OUTPUT.PUT_LINE('Customer and address records updated successfully');
 
@@ -955,6 +958,7 @@ EXCEPTION
         DBMS_OUTPUT.PUT_LINE('An error occurred: ' || SQLERRM);
 END UPDATE_CUSTOMER_RECORD;
 /
+
 
 GRANT EXECUTE ON UPDATE_CUSTOMER_RECORD TO manager_role;
 GRANT EXECUTE ON UPDATE_CUSTOMER_RECORD TO sales_rep_role;
@@ -991,5 +995,3 @@ EXCEPTION
         DBMS_OUTPUT.PUT_LINE('An error occurred: ' || SQLERRM);
 END DELETE_CUSTOMER_BY_EMAIL;
 /
-
-
