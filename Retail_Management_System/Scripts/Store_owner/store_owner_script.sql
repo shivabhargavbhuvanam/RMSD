@@ -822,3 +822,76 @@ END UPDATE_EMPLOYEE_RECORD;
 /
 
 GRANT EXECUTE ON UPDATE_EMPLOYEE_RECORD TO MANAGER_ROLE;
+
+CREATE OR REPLACE PROCEDURE UPDATE_VENDOR_RECORD(
+    pi_email            IN VENDOR.EMAIL%TYPE,
+    pi_name             IN VENDOR.NAME%TYPE DEFAULT NULL,
+    pi_phone            IN VENDOR.PHONE_NUMBER%TYPE DEFAULT NULL,
+    pi_newEmail         IN VENDOR.EMAIL%TYPE DEFAULT NULL,
+    pi_house_number     IN ADDRESS.HOUSE_NUMBER%TYPE DEFAULT NULL,
+    pi_street           IN ADDRESS.STREET%TYPE DEFAULT NULL,
+    pi_city             IN ADDRESS.CITY%TYPE DEFAULT NULL,
+    pi_state            IN ADDRESS.STATE%TYPE DEFAULT NULL,
+    pi_country          IN ADDRESS.COUNTRY%TYPE DEFAULT NULL,
+    pi_postal_code      IN ADDRESS.POSTAL_CODE%TYPE DEFAULT NULL
+)
+AS
+    vendor_count INTEGER;
+BEGIN
+    -- Check if vendor exists with the given email
+    SELECT COUNT(*) INTO vendor_count
+    FROM VENDOR
+    WHERE EMAIL = pi_email;
+
+    IF vendor_count = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('Vendor not found with the provided email');
+        RAISE_APPLICATION_ERROR(-20001, 'Vendor not found with the provided email');
+    END IF;
+
+    -- Update Vendor table
+    UPDATE VENDOR
+    SET NAME = NVL(pi_name, NAME),
+        PHONE_NUMBER = NVL(pi_phone, PHONE_NUMBER)
+    WHERE EMAIL = pi_email;
+    
+    DBMS_OUTPUT.PUT_LINE('Vendor name and phone updated');
+
+    -- Update Address table
+    -- Assuming an address record exists and is linked to the vendor
+    UPDATE ADDRESS
+    SET HOUSE_NUMBER = NVL(pi_house_number, HOUSE_NUMBER),
+        STREET = NVL(pi_street, STREET),
+        CITY = NVL(pi_city, CITY),
+        STATE = NVL(pi_state, STATE),
+        COUNTRY = NVL(pi_country, COUNTRY),
+        POSTAL_CODE = NVL(pi_postal_code, POSTAL_CODE)
+    WHERE ADDRESS_ID = (SELECT ADDRESS_ID FROM VENDOR WHERE EMAIL = pi_email);
+    
+    DBMS_OUTPUT.PUT_LINE('Address updated');
+        -- If a new email is provided, check if it's unique
+    IF pi_newEmail IS NOT NULL THEN
+        SELECT COUNT(*) INTO vendor_count
+        FROM VENDOR
+        WHERE EMAIL = pi_newEmail;
+        DBMS_OUTPUT.PUT_LINE('New email provided updated');
+
+        IF vendor_count > 0 THEN
+            DBMS_OUTPUT.PUT_LINE('New email provided already exists');
+            RAISE_APPLICATION_ERROR(-20002, 'New email provided already exists');
+        END IF;
+        IF vendor_count = 0 THEN
+            UPDATE VENDOR SET EMAIL = pi_newEmail
+                WHERE EMAIL = pi_email;
+        END IF;
+    END IF;
+
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Vendor record updated successfully');
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('An error has occurred during procedure execution');
+END UPDATE_VENDOR_RECORD;
+/
+
+GRANT EXECUTE ON UPDATE_VENDOR_RECORD TO MANAGER_ROLE;
