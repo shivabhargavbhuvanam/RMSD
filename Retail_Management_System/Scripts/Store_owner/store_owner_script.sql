@@ -69,7 +69,8 @@ CREATE TABLE Employee (
     PHONE_NUMBER VARCHAR2(15),
     HIRING_DATE TIMESTAMP,
     ROLE VARCHAR2(15),
-    WAGE NUMBER
+    WAGE NUMBER,
+    LAST_DATE TIMESTAMP DEFAULT NULL
 );
 
 CREATE TABLE Purchases (
@@ -86,7 +87,8 @@ CREATE TABLE Vendor (
     NAME VARCHAR2(45),
     ADDRESS_ID NUMBER,
     PHONE_NUMBER VARCHAR2(45),
-    EMAIL VARCHAR2(45)
+    EMAIL VARCHAR2(45),
+    LAST_DATE TIMESTAMP DEFAULT NULL
 );
 
 ALTER TABLE Address ADD PRIMARY KEY (ADDRESS_ID);
@@ -755,7 +757,8 @@ create or replace PROCEDURE UPDATE_EMPLOYEE_RECORD(
     pi_new_city             IN ADDRESS.city%TYPE DEFAULT NULL,
     pi_new_state            IN ADDRESS.state%type DEFAULT NULL,
     pi_new_country          IN ADDRESS.country%TYPE DEFAULT NULL,
-    pi_new_postal_code      IN ADDRESS.postal_code%TYPE DEFAULT NULL
+    pi_new_postal_code      IN ADDRESS.postal_code%TYPE DEFAULT NULL,
+    pi_new_last_date        IN EMPLOYEE.last_date%TYPE DEFAULT NULL
 )
 AS
     v_address_id ADDRESS.address_id%TYPE;
@@ -812,7 +815,8 @@ BEGIN
         PHONE_NUMBER = COALESCE(pi_new_phone, PHONE_NUMBER),
         HIRING_DATE  = COALESCE(pi_new_hiring_date, HIRING_DATE),
         ROLE         = COALESCE(pi_new_role, ROLE),
-        WAGE         = COALESCE(pi_new_wage, WAGE)
+        WAGE         = COALESCE(pi_new_wage, WAGE),
+        LAST_DATE    = COALESCE(pi_new_last_date, LAST_DATE)
     WHERE EMPLOYEE_ID = v_employee_id;
 
     COMMIT;
@@ -841,7 +845,8 @@ CREATE OR REPLACE PROCEDURE UPDATE_VENDOR_RECORD(
     pi_city             IN ADDRESS.CITY%TYPE DEFAULT NULL,
     pi_state            IN ADDRESS.STATE%TYPE DEFAULT NULL,
     pi_country          IN ADDRESS.COUNTRY%TYPE DEFAULT NULL,
-    pi_postal_code      IN ADDRESS.POSTAL_CODE%TYPE DEFAULT NULL
+    pi_postal_code      IN ADDRESS.POSTAL_CODE%TYPE DEFAULT NULL,
+    pi_last_date        IN VENDOR.LAST_DATE%TYPE DEFAULT NULL
 )
 AS
     vendor_count INTEGER;
@@ -858,8 +863,9 @@ BEGIN
 
     -- Update Vendor table
     UPDATE VENDOR
-    SET NAME = NVL(pi_name, NAME),
-        PHONE_NUMBER = NVL(pi_phone, PHONE_NUMBER)
+    SET NAME         = NVL(pi_name, NAME),
+        PHONE_NUMBER = NVL(pi_phone, PHONE_NUMBER),
+        LAST_DATE    = NVL(pi_last_date, LAST_DATE)
     WHERE EMAIL = pi_email;
     
     DBMS_OUTPUT.PUT_LINE('Vendor name and phone updated');
