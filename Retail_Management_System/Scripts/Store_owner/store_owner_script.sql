@@ -902,3 +902,94 @@ END UPDATE_VENDOR_RECORD;
 /
 
 GRANT EXECUTE ON UPDATE_VENDOR_RECORD TO MANAGER_ROLE;
+
+CREATE OR REPLACE PROCEDURE UPDATE_CUSTOMER_RECORD(
+    pi_customer_id   IN CUSTOMER.CUSTOMER_ID%TYPE,
+    pi_first_name    IN CUSTOMER.FIRST_NAME%TYPE,
+    pi_last_name     IN CUSTOMER.LAST_NAME%TYPE,
+    pi_phone         IN CUSTOMER.PHONE_NUMBER%TYPE,
+    pi_email         IN CUSTOMER.EMAIL%TYPE,
+    pi_house_number  IN ADDRESS.HOUSE_NUMBER%TYPE,
+    pi_street        IN ADDRESS.STREET%TYPE,
+    pi_city          IN ADDRESS.CITY%TYPE,
+    pi_state         IN ADDRESS.STATE%TYPE,
+    pi_country       IN ADDRESS.COUNTRY%TYPE,
+    pi_postal_code   IN ADDRESS.POSTAL_CODE%TYPE
+)
+AS
+    v_address_id ADDRESS.ADDRESS_ID%TYPE;
+    customer_not_found EXCEPTION;
+BEGIN
+    -- Check if customer exists
+    SELECT ADDRESS_ID INTO v_address_id FROM CUSTOMER WHERE CUSTOMER_ID = pi_customer_id;
+
+    -- Update Customer record
+    UPDATE CUSTOMER
+    SET FIRST_NAME = pi_first_name,
+        LAST_NAME = pi_last_name,
+        PHONE_NUMBER = pi_phone,
+        EMAIL = pi_email
+    WHERE CUSTOMER_ID = pi_customer_id;
+
+    -- Update Address record
+    UPDATE ADDRESS
+    SET HOUSE_NUMBER = pi_house_number,
+        STREET = pi_street,
+        CITY = pi_city,
+        STATE = pi_state,
+        COUNTRY = pi_country,
+        POSTAL_CODE = pi_postal_code
+    WHERE ADDRESS_ID = v_address_id;
+
+    DBMS_OUTPUT.PUT_LINE('Customer and address records updated successfully');
+
+    COMMIT;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE customer_not_found;
+    WHEN customer_not_found THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error: Customer record not found');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('An error occurred: ' || SQLERRM);
+END UPDATE_CUSTOMER_RECORD;
+/
+
+GRANT EXECUTE ON UPDATE_CUSTOMER_RECORD TO manager_role;
+GRANT EXECUTE ON UPDATE_CUSTOMER_RECORD TO sales_rep_role;
+
+CREATE OR REPLACE PROCEDURE DELETE_CUSTOMER_BY_EMAIL(
+    pi_email IN CUSTOMER.EMAIL%TYPE
+)
+AS
+    v_customer_id CUSTOMER.CUSTOMER_ID%TYPE;
+    v_address_id ADDRESS.ADDRESS_ID%TYPE;
+    customer_not_found EXCEPTION;
+BEGIN
+    -- Retrieve customer ID and address ID based on email
+    SELECT CUSTOMER_ID, ADDRESS_ID INTO v_customer_id, v_address_id 
+    FROM CUSTOMER WHERE EMAIL = pi_email;
+
+    -- Delete the customer record
+    DELETE FROM CUSTOMER WHERE CUSTOMER_ID = v_customer_id;
+
+    -- Delete the address record
+    DELETE FROM ADDRESS WHERE ADDRESS_ID = v_address_id;
+
+    DBMS_OUTPUT.PUT_LINE('Customer and address records deleted successfully');
+
+    COMMIT;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE customer_not_found;
+    WHEN customer_not_found THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error: Customer record not found');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('An error occurred: ' || SQLERRM);
+END DELETE_CUSTOMER_BY_EMAIL;
+/
+
+
