@@ -922,6 +922,36 @@ BEGIN
 END VALIDATE_EMAIL;
 /
 
+CREATE OR REPLACE FUNCTION EMAIL_EXISTS (
+    p_email IN VARCHAR2,
+    p_table_name IN VARCHAR2
+) RETURN NUMBER IS
+    v_email_count NUMBER;
+    e_table_or_column_not_found EXCEPTION;
+    PRAGMA EXCEPTION_INIT(e_table_or_column_not_found, -00942); -- ORA-00942: table or view does not exist
+    e_other_errors EXCEPTION;
+BEGIN
+    EXECUTE IMMEDIATE 
+        'SELECT COUNT(*) FROM ' || p_table_name || ' WHERE EMAIL = :1'
+        INTO v_email_count
+        USING p_email;
+
+    IF v_email_count > 0 THEN
+        RETURN 1;  -- Email exists
+    ELSE
+        RETURN 0;  -- Email does not exist
+    END IF;
+EXCEPTION
+    WHEN e_table_or_column_not_found THEN
+        DBMS_OUTPUT.PUT_LINE('Error: Table or column not found.');
+        RETURN -1; -- Indicate specific error
+    WHEN e_other_errors THEN
+        DBMS_OUTPUT.PUT_LINE('An unexpected error occurred: ' || SQLERRM);
+        RETURN -2; -- Indicate other errors
+END EMAIL_EXISTS;
+/
+
+
 CREATE OR REPLACE PROCEDURE UPDATE_CUSTOMER_RECORD(
     pi_current_email IN CUSTOMER.EMAIL%TYPE,
     pi_new_email     IN CUSTOMER.EMAIL%TYPE DEFAULT NULL,
@@ -947,23 +977,17 @@ BEGIN
     END IF;
 
     -- Check if the new email already exists for another customer
-    IF pi_new_email IS NOT NULL THEN
-        DECLARE
-            v_email_count INT;
-        BEGIN
-            SELECT COUNT(*)
-            INTO v_email_count
-            FROM CUSTOMER
-            WHERE EMAIL = pi_new_email AND EMAIL != pi_current_email;
-
-            IF v_email_count > 0 THEN
-                RAISE email_already_exists;
-            END IF;
-        END;
+    IF pi_new_email IS NOT NULL AND EMAIL_EXISTS(pi_new_email, 'CUSTOMER') = 1 AND pi_new_email != pi_current_email THEN
+        RAISE email_already_exists;
     END IF;
 
     -- Check if customer exists and get address ID
-    SELECT ADDRESS_ID INTO v_address_id FROM CUSTOMER WHERE EMAIL = pi_current_email;
+    BEGIN
+        SELECT ADDRESS_ID INTO v_address_id FROM CUSTOMER WHERE EMAIL = pi_current_email;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE customer_not_found;
+    END;
 
     -- Update Customer table
     IF pi_first_name IS NOT NULL OR pi_last_name IS NOT NULL OR 
@@ -1001,17 +1025,14 @@ EXCEPTION
     WHEN email_already_exists THEN
         ROLLBACK;
         DBMS_OUTPUT.PUT_LINE('Error: New email already in use by another customer');
-    WHEN NO_DATA_FOUND THEN
-        RAISE customer_not_found;
     WHEN customer_not_found THEN
         ROLLBACK;
-        DBMS_OUTPUT.PUT_LINE('Error: Customer record not found');
+        DBMS_OUTPUT.PUT_LINE('Error: Customer record not found for the given current email');
     WHEN OTHERS THEN
         ROLLBACK;
         DBMS_OUTPUT.PUT_LINE('An error occurred: ' || SQLERRM);
 END UPDATE_CUSTOMER_RECORD;
 /
-
 
 GRANT EXECUTE ON UPDATE_CUSTOMER_RECORD TO manager_role;
 GRANT EXECUTE ON UPDATE_CUSTOMER_RECORD TO sales_rep_role;
