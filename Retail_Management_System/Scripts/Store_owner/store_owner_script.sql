@@ -1042,3 +1042,166 @@ EXCEPTION
         DBMS_OUTPUT.PUT_LINE('An error occurred: ' || SQLERRM);
 END DELETE_CUSTOMER_RECORD;
 /
+
+
+
+CREATE OR REPLACE TYPE product_type FORCE AS OBJECT (
+    name VARCHAR2(100),
+    category VARCHAR2(100),
+    units NUMBER
+);
+/
+
+CREATE OR REPLACE TYPE product_id_type FORCE AS OBJECT (
+    product_id NUMBER
+);
+/
+
+CREATE OR REPLACE TYPE product_list_type FORCE AS TABLE OF product_type;
+/
+
+CREATE OR REPLACE TYPE product_id_list_type FORCE AS TABLE OF product_id_type;
+/
+
+grant execute on product_type to manager_role;
+grant execute on product_id_type to manager_role;
+grant execute on product_list_type to manager_role;
+grant execute on product_id_list_type to manager_role;
+
+grant execute on product_type to sales_rep_role;
+grant execute on product_id_type to sales_rep_role;
+grant execute on product_list_type to sales_rep_role;
+grant execute on product_id_list_type to sales_rep_role;
+
+
+CREATE OR REPLACE PROCEDURE process_products(
+    pi_products       IN product_list_type,
+    pi_customer_email IN CUSTOMER.EMAIL%TYPE,
+    pi_employee_email IN EMPLOYEE.EMAIL%TYPE
+)
+AS
+     v_error_found BOOLEAN := FALSE;
+     v_customer_id INTEGER;
+     v_employee_id INTEGER;
+     v_remaining_units INTEGER;
+     v_product_id PRODUCT.PRODUCT_ID%TYPE;
+     v_order_id ORDERS.ORDER_ID%TYPE;
+     v_product_ids product_id_list_type := product_id_list_type();
+BEGIN
+    
+        -- Validate customer email
+    BEGIN
+      SELECT customer_id
+      INTO v_customer_id
+      FROM CUSTOMER
+      WHERE EMAIL = pi_customer_email;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('Could not find customer for email: ' || pi_customer_email);
+        RAISE_APPLICATION_ERROR(-20002, 'Customer not found for email: ' || pi_customer_email);
+    END;
+
+    BEGIN
+      SELECT employee_id
+      INTO v_employee_id
+      FROM EMPLOYEE
+      WHERE EMAIL = pi_employee_email;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('Could not find employee for email: ' || pi_employee_email);
+        RAISE_APPLICATION_ERROR(-20003, 'Employee not found for email: ' || pi_employee_email);
+    END;
+
+
+    FOR i IN 1..pi_products.COUNT LOOP
+        IF pi_products(i).name IS NULL OR pi_products(i).category IS NULL OR pi_products(i).units IS NULL THEN
+            DBMS_OUTPUT.PUT_LINE('Error: Incomplete product data for product ' || i);
+            v_error_found := TRUE;
+        END IF;
+    END LOOP;
+    
+    IF v_error_found THEN
+        DBMS_OUTPUT.PUT_LINE('Provide all the fields for the product details');
+        RAISE_APPLICATION_ERROR(-20001, 'Incomplete product data, please enter all the fields');
+    END IF;
+    
+    FOR i IN 1..pi_products.COUNT LOOP
+        BEGIN
+            SELECT PRODUCT_ID INTO v_product_id
+            FROM PRODUCT
+            WHERE NAME = pi_products(i).name
+            AND CATEGORY = pi_products(i).category;
+            
+        IF v_product_id IS NOT NULL THEN
+            DBMS_OUTPUT.PUT_LINE('Product ID: ' || v_product_id);
+            v_product_ids.EXTEND;
+            v_product_ids(v_product_ids.COUNT) := product_id_type(product_id => v_product_id);
+            
+        END IF;
+    
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                DBMS_OUTPUT.PUT_LINE('Error: Product not found for name: ' || pi_products(i).name || ' and category: ' || pi_products(i).category);
+                v_error_found := TRUE;
+        
+        END;
+    
+    
+    END LOOP;
+    
+    IF v_error_found THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Incomplete product data or product not found');
+    END IF;    
+    
+    FOR i IN 1..v_product_ids.COUNT LOOP
+    
+        SELECT REMAINING_UNITS INTO v_remaining_units FROM PRODUCT WHERE PRODUCT_ID = v_product_ids(i).product_id;
+        
+        IF v_remaining_units < pi_products(i).units THEN
+          DBMS_OUTPUT.PUT_LINE('Insufficient units for product (ID: ' || v_product_ids(i).product_id || '). Requested: ' || pi_products(i).units || ', Available: ' || v_remaining_units);
+          v_error_found := TRUE;
+        END IF;
+        
+    END LOOP;
+    
+    IF v_error_found THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Insufficient units');
+    END IF;
+    
+    INSERT INTO ORDERS (CUSTOMER_ID, EMPLOYEE_ID, ORDER_DATE) VALUES (v_customer_id, v_employee_id, SYSTIMESTAMP )
+    RETURNING ORDER_ID INTO v_order_id;
+    
+    FOR i IN 1..v_product_ids.COUNT LOOP
+    
+        INSERT INTO ITEM_ORDERS (ORDER_ID, PRODUCT_ID, UNITS) VALUES (v_order_id, v_product_ids(i).product_id, pi_products(i).units);
+        
+    END LOOP;
+    
+    DBMS_OUTPUT.PUT_LINE('Sucessfully recorded order');
+    
+END process_products;
+/
+
+GRANT EXECUTE ON process_products TO sales_rep_role;
+GRANT EXECUTE ON process_products TO manager_role;
+
+CREATE OR REPLACE TRIGGER update_product_stock
+AFTER INSERT ON ITEM_ORDERS
+FOR EACH ROW
+DECLARE
+  v_product_id PRODUCT.PRODUCT_ID%TYPE;
+  v_remaining_units NUMBER;
+  v_ordered_units NUMBER;
+BEGIN
+  v_product_id := :NEW.PRODUCT_ID;
+  v_ordered_units := :NEW.UNITS;
+
+  UPDATE PRODUCT
+  SET REMAINING_UNITS = REMAINING_UNITS - v_ordered_units
+  WHERE PRODUCT_ID = v_product_id;
+
+  IF SQL%NOTFOUND THEN
+    RAISE_APPLICATION_ERROR(-20001, 'Product not found for order (ID: ' || v_product_id || ')');
+  END IF;
+END;
+/
