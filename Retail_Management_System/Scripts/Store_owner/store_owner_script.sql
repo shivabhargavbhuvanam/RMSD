@@ -620,3 +620,79 @@ INSERT INTO Purchases (PURCHASE_DATE, VENDOR_ID, PRODUCT_ID, QUANTITY, TOTAL_PRI
 INSERT INTO Purchases (PURCHASE_DATE, VENDOR_ID, PRODUCT_ID, QUANTITY, TOTAL_PRICE) VALUES (TO_TIMESTAMP('2024-01-03 12:00:00', 'YYYY-MM-DD HH24:MI:SS'), 3, 3, 200, 200.00);
 INSERT INTO Purchases (PURCHASE_DATE, VENDOR_ID, PRODUCT_ID, QUANTITY, TOTAL_PRICE) VALUES (TO_TIMESTAMP('2024-01-03 12:00:00', 'YYYY-MM-DD HH24:MI:SS'), 4, 4, 150, 900.00);
 INSERT INTO Purchases (PURCHASE_DATE, VENDOR_ID, PRODUCT_ID, QUANTITY, TOTAL_PRICE) VALUES (TO_TIMESTAMP('2024-01-03 12:00:00', 'YYYY-MM-DD HH24:MI:SS'), 5, 5, 50, 1900.00);
+
+
+create or replace PROCEDURE UPDATE_EMPLOYEE_RECORD(
+    pi_new_first_name       IN EMPLOYEE.first_name%TYPE DEFAULT NULL,
+    pi_new_last_name        IN EMPLOYEE.last_name%TYPE DEFAULT NULL,
+    pi_current_email        IN EMPLOYEE.email%TYPE,
+    pi_new_email            IN EMPLOYEE.email%TYPE DEFAULT NULL,
+    pi_new_phone            IN EMPLOYEE.phone_number%TYPE DEFAULT NULL,
+    pi_new_hiring_date      IN EMPLOYEE.hiring_date%TYPE DEFAULT NULL,
+    pi_new_role             IN EMPLOYEE.role%TYPE DEFAULT NULL,
+    pi_new_wage             IN EMPLOYEE.wage%TYPE DEFAULT NULL,
+    pi_new_house_number     IN ADDRESS.house_number%TYPE DEFAULT NULL,
+    pi_new_street           IN ADDRESS.street%TYPE DEFAULT NULL,
+    pi_new_city             IN ADDRESS.city%TYPE DEFAULT NULL,
+    pi_new_state            IN ADDRESS.state%type DEFAULT NULL,
+    pi_new_country          IN ADDRESS.country%TYPE DEFAULT NULL,
+    pi_new_postal_code      IN ADDRESS.postal_code%TYPE DEFAULT NULL
+)
+AS
+    v_address_id ADDRESS.address_id%TYPE;
+    v_employee_id EMPLOYEE.employee_id%TYPE;
+    invalid_input EXCEPTION;
+
+BEGIN
+
+        -- Validate input arguments
+    IF  pi_current_email IS NULL 
+    THEN
+        RAISE invalid_input;
+    END IF;
+    
+    BEGIN
+    
+        SELECT ADDRESS_ID, EMPLOYEE_ID INTO v_address_id, v_employee_id FROM EMPLOYEE WHERE EMAIL = pi_current_email;
+    
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            DBMS_OUTPUT.PUT_LINE('Could not find employee record with specified email');
+            RAISE_APPLICATION_ERROR(-200001, 'Could not update employee ');
+    
+    END;
+
+    UPDATE ADDRESS 
+    SET HOUSE_NUMBER = COALESCE(pi_new_house_number,HOUSE_NUMBER), 
+        STREET       = COALESCE(pi_new_street,STREET), 
+        CITY         = COALESCE(pi_new_city,CITY), 
+        STATE        = COALESCE(pi_new_state,STATE), 
+        COUNTRY      = COALESCE(pi_new_country,COUNTRY), 
+        POSTAL_CODE  = COALESCE(pi_new_postal_code,POSTAL_CODE)
+    WHERE ADDRESS_ID = v_address_id;
+    
+    UPDATE Employee
+    SET FIRST_NAME   = COALESCE(pi_new_first_name, FIRST_NAME),
+        LAST_NAME    = COALESCE(pi_new_last_name, LAST_NAME),
+        PHONE_NUMBER = COALESCE(pi_new_phone, PHONE_NUMBER),
+        EMAIL        = COALESCE(pi_new_email, EMAIL),
+        HIRING_DATE  = COALESCE(pi_new_hiring_date, HIRING_DATE),
+        ROLE         = COALESCE(pi_new_role, ROLE),
+        WAGE         = COALESCE(pi_new_wage, WAGE)
+    WHERE EMPLOYEE_ID = v_employee_id;
+
+    COMMIT;
+
+     DBMS_OUTPUT.PUT_LINE('Employee details updated successfully');
+
+EXCEPTION
+    WHEN invalid_input THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error: You need to provide a valid existing current email');
+     WHEN OTHERS THEN
+        ROLLBACK;
+
+END UPDATE_EMPLOYEE_RECORD;
+/
+
+GRANT EXECUTE ON UPDATE_EMPLOYEE_RECORD TO MANAGER_ROLE;
