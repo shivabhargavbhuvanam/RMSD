@@ -79,7 +79,7 @@ CREATE TABLE Purchases (
     VENDOR_ID NUMBER,
     PRODUCT_ID NUMBER,
     QUANTITY NUMBER,
-    TOTAL_PRICE NUMBER(10, 2)
+    BUYING_PRICE NUMBER(10, 2)
 );
 
 CREATE TABLE Vendor (
@@ -712,6 +712,57 @@ END;
 /
 
 
+CREATE OR REPLACE PROCEDURE PROCESS_PURCHASE(
+    pi_vendor_id      IN VENDOR.VENDOR_ID%TYPE,
+    pi_product_id     IN PRODUCT.PRODUCT_ID%TYPE,
+    pi_units          IN PURCHASES.QUANTITY%TYPE,
+    pi_buying_price   IN PURCHASES.BUYING_PRICE%TYPE
+)
+AS
+     v_remaining_units INTEGER;
+     v_vendor_id INTEGER;
+     v_product_id INTEGER;
+BEGIN
+    BEGIN
+      SELECT vendor_id
+      INTO v_vendor_id
+      FROM VENDOR
+      WHERE VENDOR_ID = pi_vendor_id;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('Could not find vendor for id: ' || pi_vendor_id);
+        RAISE_APPLICATION_ERROR(-20003, 'vendor not found for id: ' || pi_vendor_id);
+    END;
+    BEGIN
+      SELECT product_id
+      INTO v_product_id
+      FROM PRODUCT
+      WHERE PRODUCT_ID = pi_product_id;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('Could not find product for id: ' || pi_product_id);
+        RAISE_APPLICATION_ERROR(-20003, 'product not found for id: ' || pi_product_id);
+    END;
+    IF pi_units<1 THEN
+        DBMS_OUTPUT.PUT_LINE('Provide valid count of products bought');
+        RAISE_APPLICATION_ERROR(-20001, 'Invalid quantity of product bought' || pi_units);
+    END IF;  
+    
+    IF pi_buying_price<0 THEN
+        DBMS_OUTPUT.PUT_LINE('Provide valid buying price of product bought');
+        RAISE_APPLICATION_ERROR(-20001, 'Invalid buying price of product bought' || pi_buying_price);
+    END IF;
+    
+    INSERT INTO PURCHASES (VENDOR_ID, PRODUCT_ID, PURCHASE_DATE, QUANTITY, BUYING_PRICE) VALUES (v_vendor_id, v_product_id, SYSTIMESTAMP, pi_units, pi_buying_price);
+    
+    COMMIT;
+    
+    DBMS_OUTPUT.PUT_LINE('Sucessfully recorded purchase');
+    
+END PROCESS_PURCHASE;
+/
+GRANT EXECUTE ON PROCESS_PURCHASE TO accountant_role;
+
 -- Inserting data into the Product table
 INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) VALUES ('Electronics', 'Smartphone', 50, 299.99);
 INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) VALUES ('Clothing', 'T-Shirt', 150, 19.99);
@@ -735,12 +786,30 @@ INSERT INTO Item_Orders (ORDER_ID, PRODUCT_ID, UNITS) VALUES (3, 3, 1);
 INSERT INTO Item_Orders (ORDER_ID, PRODUCT_ID, UNITS) VALUES (4, 5, 3);
 INSERT INTO Item_Orders (ORDER_ID, PRODUCT_ID, UNITS) VALUES (5, 2, 8);
 
--- Inserting data into the Purchases table
-INSERT INTO Purchases (PURCHASE_DATE, VENDOR_ID, PRODUCT_ID, QUANTITY, BUYING_PRICE) VALUES (TO_TIMESTAMP('2024-01-01 10:00:00', 'YYYY-MM-DD HH24:MI:SS'), 1, 1, 50, 12500.00);
-INSERT INTO Purchases (PURCHASE_DATE, VENDOR_ID, PRODUCT_ID, QUANTITY, BUYING_PRICE) VALUES (TO_TIMESTAMP('2024-01-02 11:00:00', 'YYYY-MM-DD HH24:MI:SS'), 2, 2, 150, 2250.00);
-INSERT INTO Purchases (PURCHASE_DATE, VENDOR_ID, PRODUCT_ID, QUANTITY, BUYING_PRICE) VALUES (TO_TIMESTAMP('2024-01-03 12:00:00', 'YYYY-MM-DD HH24:MI:SS'), 3, 3, 200, 200.00);
-INSERT INTO Purchases (PURCHASE_DATE, VENDOR_ID, PRODUCT_ID, QUANTITY, BUYING_PRICE) VALUES (TO_TIMESTAMP('2024-01-03 12:00:00', 'YYYY-MM-DD HH24:MI:SS'), 4, 4, 150, 900.00);
-INSERT INTO Purchases (PURCHASE_DATE, VENDOR_ID, PRODUCT_ID, QUANTITY, BUYING_PRICE) VALUES (TO_TIMESTAMP('2024-01-03 12:00:00', 'YYYY-MM-DD HH24:MI:SS'), 5, 5, 50, 1900.00);
+BEGIN
+    PROCESS_PURCHASE(pi_vendor_id => 1, pi_product_id => 1, pi_units => 50, pi_buying_price => 12500.00 );
+END;
+/
+
+BEGIN
+    PROCESS_PURCHASE(pi_vendor_id => 2, pi_product_id => 2, pi_units => 150, pi_buying_price => 2250.00 );
+END;
+/
+
+BEGIN
+    PROCESS_PURCHASE(pi_vendor_id => 3, pi_product_id => 3, pi_units => 200, pi_buying_price => 200.00 );
+END;
+/
+
+BEGIN
+    PROCESS_PURCHASE(pi_vendor_id => 4, pi_product_id => 4, pi_units => 150, pi_buying_price => 900.00 );
+END;
+/
+
+BEGIN
+    PROCESS_PURCHASE(pi_vendor_id => 5, pi_product_id => 5, pi_units => 50, pi_buying_price => 1900.00 );
+END;
+/
 
 
 create or replace PROCEDURE UPDATE_EMPLOYEE_RECORD(
@@ -1233,55 +1302,6 @@ BEGIN
 END;
 /
 
-CREATE OR REPLACE PROCEDURE PROCESS_PURCHASE(
-    pi_vendor_id      IN VENDOR.VENDOR_ID%TYPE,
-    pi_product_id     IN PRODUCT.PRODUCT_ID%TYPE,
-    pi_units          IN PURCHASES.QUANTITY%TYPE,
-    pi_buying_price   IN PURCHASES.BUYING_PRICE%TYPE
-)
-AS
-     v_remaining_units INTEGER;
-     v_vendor_id INTEGER;
-     v_product_id INTEGER;
-BEGIN
-    BEGIN
-      SELECT vendor_id
-      INTO v_vendor_id
-      FROM VENDOR
-      WHERE VENDOR_ID = pi_vendor_id;
-    EXCEPTION
-      WHEN NO_DATA_FOUND THEN
-        DBMS_OUTPUT.PUT_LINE('Could not find vendor for id: ' || pi_vendor_id);
-        RAISE_APPLICATION_ERROR(-20003, 'vendor not found for id: ' || pi_vendor_id);
-    END;
-    BEGIN
-      SELECT product_id
-      INTO v_product_id
-      FROM PRODUCT
-      WHERE PRODUCT_ID = pi_product_id;
-    EXCEPTION
-      WHEN NO_DATA_FOUND THEN
-        DBMS_OUTPUT.PUT_LINE('Could not find product for id: ' || pi_product_id);
-        RAISE_APPLICATION_ERROR(-20003, 'product not found for id: ' || pi_product_id);
-    END;
-    IF pi_units<1 THEN
-        DBMS_OUTPUT.PUT_LINE('Provide valid count of products bought');
-        RAISE_APPLICATION_ERROR(-20001, 'Invalid quantity of product bought' || pi_units);
-    END IF;  
-    
-    IF pi_buying_price<0 THEN
-        DBMS_OUTPUT.PUT_LINE('Provide valid buying price of product bought');
-        RAISE_APPLICATION_ERROR(-20001, 'Invalid buying price of product bought' || pi_buying_price);
-    END IF;
-    
-    INSERT INTO PURCHASES (VENDOR_ID, PRODUCT_ID, PURCHASE_DATE, QUANTITY, BUYING_PRICE) VALUES (v_vendor_id, v_product_id, SYSTIMESTAMP, pi_units, pi_buying_price);
-    
-    
-    DBMS_OUTPUT.PUT_LINE('Sucessfully recorded purchase');
-    
-END PROCESS_PURCHASE;
-/
-GRANT EXECUTE ON PROCESS_PURCHASE TO accountant_role;
 CREATE OR REPLACE TRIGGER UPDATE_PRODUCT_QUANTITY_AFTER_PURCHASE
 AFTER INSERT ON PURCHASES
 FOR EACH ROW
@@ -1298,9 +1318,5 @@ BEGIN
   IF SQL%NOTFOUND THEN
     RAISE_APPLICATION_ERROR(-20001, 'Product not found for order (ID: ' || v_product_id || ')');
   END IF;
-END;
-/
-BEGIN
-    PROCESS_PURCHASE(pi_vendor_id => 1, pi_product_id => 1, pi_units => 3, pi_buying_price => 249 );
 END;
 /
