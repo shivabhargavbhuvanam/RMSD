@@ -763,14 +763,6 @@ END PROCESS_PURCHASE;
 /
 GRANT EXECUTE ON PROCESS_PURCHASE TO accountant_role;
 
--- Inserting data into the Product table
-INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) VALUES ('Electronics', 'Smartphone', 50, 299.99);
-INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) VALUES ('Clothing', 'T-Shirt', 150, 19.99);
-INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) VALUES ('Groceries', 'Milk', 200, 2.99);
-INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) VALUES ('Cosmetics', 'Retinoid', 150, 9.99);
-INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) VALUES ('Shoes', 'Nike', 50, 39.99);
-
-
 -- Inserting data into the Orders table (assuming the date format 'YYYY-MM-DD HH24:MI:SS')
 INSERT INTO Orders (CUSTOMER_ID, EMPLOYEE_ID, ORDER_DATE) VALUES (1, 1, TO_TIMESTAMP('2024-03-20 10:00:00', 'YYYY-MM-DD HH24:MI:SS'));
 INSERT INTO Orders (CUSTOMER_ID, EMPLOYEE_ID, ORDER_DATE) VALUES (2, 2, TO_TIMESTAMP('2024-03-20 10:30:00', 'YYYY-MM-DD HH24:MI:SS'));
@@ -1319,4 +1311,126 @@ BEGIN
     RAISE_APPLICATION_ERROR(-20001, 'Product not found for order (ID: ' || v_product_id || ')');
   END IF;
 END;
+/
+
+CREATE OR REPLACE PROCEDURE ADD_PRODUCT (
+    p_category IN Product.CATEGORY%TYPE,
+    p_name IN Product.NAME%TYPE,
+    p_remaining_units IN Product.REMAINING_UNITS%TYPE,
+    p_selling_price IN Product.SELLING_PRICE%TYPE
+) AS
+BEGIN
+    INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) 
+    VALUES (p_category, p_name, p_remaining_units, p_selling_price);
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE; -- Re-raise the exception for further handling or logging
+END ADD_PRODUCT;
+/
+
+GRANT EXECUTE ON ADD_PRODUCT TO inventory_clerk_role;
+
+BEGIN
+    ADD_PRODUCT(
+        p_category => 'Clothing',
+        p_name => 'T-Shirt',
+        p_remaining_units => 150,
+        p_selling_price => 19.99
+    );
+END;
+/
+
+BEGIN
+    ADD_PRODUCT(
+        p_category => 'Groceries',
+        p_name => 'Milk',
+        p_remaining_units => 200,
+        p_selling_price => 2.99
+    );
+END;
+/
+
+BEGIN
+    ADD_PRODUCT(
+        p_category => 'Cosmetics',
+        p_name => 'Retinoid',
+        p_remaining_units => 150,
+        p_selling_price => 9.99
+    );
+END;
+/
+
+BEGIN
+    ADD_PRODUCT(
+        p_category => 'Shoes',
+        p_name => 'Nike',
+        p_remaining_units => 50,
+        p_selling_price => 39.99
+    );
+END;
+/
+
+BEGIN
+    ADD_PRODUCT(
+        p_category => 'Electronics',
+        p_name => 'Smartphone',
+        p_remaining_units => 50,
+        p_selling_price => 299.99
+    );
+END;
+/
+
+CREATE OR REPLACE PROCEDURE UPDATE_PRODUCT_NAME_CATEGORY (
+    p_product_id IN Product.PRODUCT_ID%TYPE,
+    p_category IN Product.CATEGORY%TYPE,
+    p_name IN Product.NAME%TYPE
+) AS
+BEGIN
+    UPDATE Product
+    SET CATEGORY = p_category,
+        NAME = p_name
+    WHERE PRODUCT_ID = p_product_id;
+
+    IF SQL%ROWCOUNT = 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'No product found with the given PRODUCT_ID');
+    END IF;
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END UPDATE_PRODUCT_NAME_CATEGORY;
+/
+
+GRANT EXECUTE ON UPDATE_PRODUCT_NAME_CATEGORY TO inventory_clerk_role;
+
+CREATE OR REPLACE PROCEDURE UPDATE_PRODUCT (
+    p_product_id IN Product.PRODUCT_ID%TYPE,
+    p_category IN Product.CATEGORY%TYPE DEFAULT NULL,
+    p_name IN Product.NAME%TYPE DEFAULT NULL,
+    p_remaining_units IN Product.REMAINING_UNITS%TYPE DEFAULT NULL,
+    p_selling_price IN Product.SELLING_PRICE%TYPE DEFAULT NULL
+) AS
+BEGIN
+    UPDATE Product
+    SET CATEGORY = COALESCE(p_category, CATEGORY),
+        NAME = COALESCE(p_name, NAME),
+        REMAINING_UNITS = COALESCE(p_remaining_units, REMAINING_UNITS),
+        SELLING_PRICE = COALESCE(p_selling_price, SELLING_PRICE)
+    WHERE PRODUCT_ID = p_product_id;
+
+    IF SQL%ROWCOUNT = 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'No product found with the given PRODUCT_ID');
+    END IF;
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE; -- Re-raise the exception for further handling
+END UPDATE_PRODUCT;
 /
