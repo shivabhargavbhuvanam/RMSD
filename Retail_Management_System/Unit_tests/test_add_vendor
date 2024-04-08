@@ -1,0 +1,90 @@
+SET SERVEROUTPUT ON SIZE UNLIMITED
+SET FEEDBACK ON
+
+CREATE OR REPLACE PROCEDURE TEST_ADD_VENDOR_RECORD IS
+BEGIN
+  NULL; 
+END;
+/
+
+BEGIN
+  TEST_ADD_VENDOR_RECORD;
+END;
+/
+
+-- Test cases for ADD_VENDOR_RECORD procedure
+DECLARE
+  -- Test Case 1: Inserting a new vendor with valid data
+  PROCEDURE test_valid_vendor AS
+  BEGIN
+    DBMS_OUTPUT.PUT_LINE('');
+    DBMS_OUTPUT.PUT_LINE('Positive Test Case');
+    DBMS_OUTPUT.PUT_LINE('Test Case 1: Inserting a new vendor with valid data');
+    DBMS_OUTPUT.PUT_LINE('');
+    -- Call ADD_VENDOR_RECORD with valid data
+    ADD_VENDOR_RECORD(
+      pi_name => 'Vendor1',
+      pi_email => 'vendor1@example.com',
+      pi_phone => '1234567890',
+      pi_house_number => 123,
+      pi_street => 'Main Street',
+      pi_city => 'Anytown',
+      pi_state => 'State',
+      pi_country => 'Country',
+      pi_postal_code => '12345'
+    );
+    -- Check if the vendor record was added successfully
+    DBMS_OUTPUT.PUT_LINE('Expected outcome: Vendor record added successfully');
+  END test_valid_vendor;
+
+  -- Test Case 2: Providing NULL values for mandatory fields
+  PROCEDURE test_null_values AS
+  BEGIN
+    DBMS_OUTPUT.PUT_LINE('');
+    DBMS_OUTPUT.PUT_LINE('Negative Test Case');
+    DBMS_OUTPUT.PUT_LINE('Test Case 2: Providing NULL values for mandatory fields');
+    DBMS_OUTPUT.PUT_LINE('');
+    -- Call ADD_VENDOR_RECORD with NULL values for mandatory fields
+    ADD_VENDOR_RECORD(
+      pi_name => NULL,
+      pi_email => NULL,
+      pi_phone => NULL,
+      pi_house_number => NULL,
+      pi_street => NULL,
+      pi_city => NULL,
+      pi_state => NULL,
+      pi_country => NULL,
+      pi_postal_code => NULL
+    );
+    -- Check if the procedure correctly handles NULL values
+    DBMS_OUTPUT.PUT_LINE('Expected outcome: Error: Invalid input arguments');
+  END test_null_values;
+
+  -- Test Case 3: Providing an email address that already exists
+  PROCEDURE test_existing_email AS
+  BEGIN
+    DBMS_OUTPUT.PUT_LINE('');
+    DBMS_OUTPUT.PUT_LINE('Negative Test Case');
+    DBMS_OUTPUT.PUT_LINE('Test Case 3: Providing an email address that already exists');
+    DBMS_OUTPUT.PUT_LINE('');
+    ADD_VENDOR_RECORD(
+      pi_name => 'Vendor2',
+      pi_email => 'vendor1@example.com',
+      pi_phone => '1234567890',
+      pi_house_number => 123,
+      pi_street => 'Main Street',
+      pi_city => 'Anytown',
+      pi_state => 'State',
+      pi_country => 'Country',
+      pi_postal_code => '12345'
+    );
+    -- Check if the procedure correctly handles existing email addresses
+    DBMS_OUTPUT.PUT_LINE('Expected outcome: Error: Email already exists');
+  END test_existing_email;
+BEGIN
+  -- Execute test cases
+  test_valid_vendor;
+  test_null_values;
+  test_existing_email;
+END;
+/
