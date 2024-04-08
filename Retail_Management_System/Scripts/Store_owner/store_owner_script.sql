@@ -763,6 +763,76 @@ END PROCESS_PURCHASE;
 /
 GRANT EXECUTE ON PROCESS_PURCHASE TO accountant_role;
 
+CREATE OR REPLACE PROCEDURE ADD_PRODUCT (
+    p_category IN Product.CATEGORY%TYPE,
+    p_name IN Product.NAME%TYPE,
+    p_remaining_units IN Product.REMAINING_UNITS%TYPE,
+    p_selling_price IN Product.SELLING_PRICE%TYPE
+) AS
+BEGIN
+    INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) 
+    VALUES (p_category, p_name, p_remaining_units, p_selling_price);
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE; -- Re-raise the exception for further handling or logging
+END ADD_PRODUCT;
+/
+
+GRANT EXECUTE ON ADD_PRODUCT TO inventory_clerk_role;
+
+BEGIN
+    ADD_PRODUCT(
+        p_category => 'Clothing',
+        p_name => 'T-Shirt',
+        p_remaining_units => 150,
+        p_selling_price => 19.99
+    );
+END;
+/
+
+BEGIN
+    ADD_PRODUCT(
+        p_category => 'Groceries',
+        p_name => 'Milk',
+        p_remaining_units => 200,
+        p_selling_price => 2.99
+    );
+END;
+/
+
+BEGIN
+    ADD_PRODUCT(
+        p_category => 'Cosmetics',
+        p_name => 'Retinoid',
+        p_remaining_units => 150,
+        p_selling_price => 9.99
+    );
+END;
+/
+
+BEGIN
+    ADD_PRODUCT(
+        p_category => 'Shoes',
+        p_name => 'Nike',
+        p_remaining_units => 50,
+        p_selling_price => 39.99
+    );
+END;
+/
+
+BEGIN
+    ADD_PRODUCT(
+        p_category => 'Electronics',
+        p_name => 'Smartphone',
+        p_remaining_units => 50,
+        p_selling_price => 299.99
+    );
+END;
+/
+
 -- Inserting data into the Orders table (assuming the date format 'YYYY-MM-DD HH24:MI:SS')
 INSERT INTO Orders (CUSTOMER_ID, EMPLOYEE_ID, ORDER_DATE) VALUES (1, 1, TO_TIMESTAMP('2024-03-20 10:00:00', 'YYYY-MM-DD HH24:MI:SS'));
 INSERT INTO Orders (CUSTOMER_ID, EMPLOYEE_ID, ORDER_DATE) VALUES (2, 2, TO_TIMESTAMP('2024-03-20 10:30:00', 'YYYY-MM-DD HH24:MI:SS'));
@@ -1313,87 +1383,24 @@ BEGIN
 END;
 /
 
-CREATE OR REPLACE PROCEDURE ADD_PRODUCT (
-    p_category IN Product.CATEGORY%TYPE,
-    p_name IN Product.NAME%TYPE,
-    p_remaining_units IN Product.REMAINING_UNITS%TYPE,
-    p_selling_price IN Product.SELLING_PRICE%TYPE
-) AS
-BEGIN
-    INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) 
-    VALUES (p_category, p_name, p_remaining_units, p_selling_price);
-
-    COMMIT;
-EXCEPTION
-    WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE; -- Re-raise the exception for further handling or logging
-END ADD_PRODUCT;
-/
-
-GRANT EXECUTE ON ADD_PRODUCT TO inventory_clerk_role;
-
-BEGIN
-    ADD_PRODUCT(
-        p_category => 'Clothing',
-        p_name => 'T-Shirt',
-        p_remaining_units => 150,
-        p_selling_price => 19.99
-    );
-END;
-/
-
-BEGIN
-    ADD_PRODUCT(
-        p_category => 'Groceries',
-        p_name => 'Milk',
-        p_remaining_units => 200,
-        p_selling_price => 2.99
-    );
-END;
-/
-
-BEGIN
-    ADD_PRODUCT(
-        p_category => 'Cosmetics',
-        p_name => 'Retinoid',
-        p_remaining_units => 150,
-        p_selling_price => 9.99
-    );
-END;
-/
-
-BEGIN
-    ADD_PRODUCT(
-        p_category => 'Shoes',
-        p_name => 'Nike',
-        p_remaining_units => 50,
-        p_selling_price => 39.99
-    );
-END;
-/
-
-BEGIN
-    ADD_PRODUCT(
-        p_category => 'Electronics',
-        p_name => 'Smartphone',
-        p_remaining_units => 50,
-        p_selling_price => 299.99
-    );
-END;
-/
-
 CREATE OR REPLACE PROCEDURE UPDATE_PRODUCT_NAME_CATEGORY (
     p_product_id IN Product.PRODUCT_ID%TYPE,
-    p_category IN Product.CATEGORY%TYPE,
-    p_name IN Product.NAME%TYPE
+    p_category IN Product.CATEGORY%TYPE DEFAULT NULL,
+    p_name IN Product.NAME%TYPE DEFAULT NULL
 ) AS
 BEGIN
+    -- Check if both parameters are NULL
+    IF p_category IS NULL AND p_name IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20003, 'No update information provided');
+    END IF;
+
+    -- Update Product table
     UPDATE Product
-    SET CATEGORY = p_category,
-        NAME = p_name
+    SET CATEGORY = COALESCE(p_category, CATEGORY),
+        NAME = COALESCE(p_name, NAME)
     WHERE PRODUCT_ID = p_product_id;
 
+    -- Check if the update was successful
     IF SQL%ROWCOUNT = 0 THEN
         RAISE_APPLICATION_ERROR(-20001, 'No product found with the given PRODUCT_ID');
     END IF;
@@ -1402,7 +1409,7 @@ BEGIN
 EXCEPTION
     WHEN OTHERS THEN
         ROLLBACK;
-        RAISE;
+        RAISE; -- Re-raise the exception for further handling
 END UPDATE_PRODUCT_NAME_CATEGORY;
 /
 
