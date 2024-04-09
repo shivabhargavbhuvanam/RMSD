@@ -57,6 +57,7 @@ CREATE TABLE Orders (
 CREATE TABLE Item_Orders (
     ORDER_ID NUMBER,
     PRODUCT_ID NUMBER,
+    SELLING_PRICE NUMBER,
     UNITS NUMBER
 );
 
@@ -444,9 +445,9 @@ END;
 
 BEGIN
     ADD_EMPLOYEE_RECORD(
-        pi_first_name    => 'Marie',
-        pi_last_name     => 'Thomas',
-        pi_email         => 'thomas@email.com',
+        pi_first_name    => 'Millie',
+        pi_last_name     => 'Bobby',
+        pi_email         => 'bobby@email.com',
         pi_phone         => '(855)364-6769',
         pi_hiring_date   => SYSTIMESTAMP,
         pi_role          => 'Sales rep',
@@ -846,21 +847,6 @@ BEGIN
 END;
 /
 
--- Inserting data into the Orders table (assuming the date format 'YYYY-MM-DD HH24:MI:SS')
-INSERT INTO Orders (CUSTOMER_ID, EMPLOYEE_ID, ORDER_DATE) VALUES (1, 1, TO_TIMESTAMP('2024-03-20 10:00:00', 'YYYY-MM-DD HH24:MI:SS'));
-INSERT INTO Orders (CUSTOMER_ID, EMPLOYEE_ID, ORDER_DATE) VALUES (2, 2, TO_TIMESTAMP('2024-03-20 10:30:00', 'YYYY-MM-DD HH24:MI:SS'));
-INSERT INTO Orders (CUSTOMER_ID, EMPLOYEE_ID, ORDER_DATE) VALUES (3, 3, TO_TIMESTAMP('2024-03-20 11:00:00', 'YYYY-MM-DD HH24:MI:SS'));
-INSERT INTO Orders (CUSTOMER_ID, EMPLOYEE_ID, ORDER_DATE) VALUES (4, 1, TO_TIMESTAMP('2024-03-20 10:30:00', 'YYYY-MM-DD HH24:MI:SS'));
-INSERT INTO Orders (CUSTOMER_ID, EMPLOYEE_ID, ORDER_DATE) VALUES (5, 4, TO_TIMESTAMP('2024-03-20 11:00:00', 'YYYY-MM-DD HH24:MI:SS'));
-
-
--- Inserting data into the Item_Orders table
-INSERT INTO Item_Orders (ORDER_ID, PRODUCT_ID, UNITS) VALUES (1, 1, 2);
-INSERT INTO Item_Orders (ORDER_ID, PRODUCT_ID, UNITS) VALUES (2, 2, 3);
-INSERT INTO Item_Orders (ORDER_ID, PRODUCT_ID, UNITS) VALUES (3, 3, 1);
-INSERT INTO Item_Orders (ORDER_ID, PRODUCT_ID, UNITS) VALUES (4, 5, 3);
-INSERT INTO Item_Orders (ORDER_ID, PRODUCT_ID, UNITS) VALUES (5, 2, 8);
-
 BEGIN
     PROCESS_PURCHASE(pi_vendor_id => 1, pi_product_id => 1, pi_units => 50, pi_buying_price => 17.99 );
 END;
@@ -1228,11 +1214,22 @@ CREATE OR REPLACE TYPE product_id_type FORCE AS OBJECT (
 );
 /
 
+CREATE OR REPLACE TYPE product_price_type FORCE AS OBJECT (
+
+    product_price NUMBER
+
+);
+/
+
 CREATE OR REPLACE TYPE product_list_type FORCE AS TABLE OF product_type;
 /
 
 CREATE OR REPLACE TYPE product_id_list_type FORCE AS TABLE OF product_id_type;
 /
+
+CREATE OR REPLACE TYPE product_price_list_type FORCE AS TABLE OF product_price_type;
+/
+
 
 grant execute on product_type to manager_role;
 grant execute on product_id_type to manager_role;
@@ -1256,8 +1253,10 @@ AS
      v_employee_id INTEGER;
      v_remaining_units INTEGER;
      v_product_id PRODUCT.PRODUCT_ID%TYPE;
+     v_product_price PRODUCT.SELLING_PRICE%TYPE;
      v_order_id ORDERS.ORDER_ID%TYPE;
      v_product_ids product_id_list_type := product_id_list_type();
+     v_product_prices product_price_list_type := product_price_list_type();
 BEGIN
     
         -- Validate customer email
@@ -1298,7 +1297,7 @@ BEGIN
     
     FOR i IN 1..pi_products.COUNT LOOP
         BEGIN
-            SELECT PRODUCT_ID INTO v_product_id
+            SELECT PRODUCT_ID, SELLING_PRICE INTO v_product_id, v_product_price
             FROM PRODUCT
             WHERE NAME = pi_products(i).name
             AND CATEGORY = pi_products(i).category;
@@ -1307,6 +1306,9 @@ BEGIN
             DBMS_OUTPUT.PUT_LINE('Product ID: ' || v_product_id);
             v_product_ids.EXTEND;
             v_product_ids(v_product_ids.COUNT) := product_id_type(product_id => v_product_id);
+            
+            v_product_prices.EXTEND;
+            v_product_prices(v_product_prices.COUNT) := product_price_type(product_price => v_product_price);
             
         END IF;
     
@@ -1344,7 +1346,7 @@ BEGIN
     
     FOR i IN 1..v_product_ids.COUNT LOOP
     
-        INSERT INTO ITEM_ORDERS (ORDER_ID, PRODUCT_ID, UNITS) VALUES (v_order_id, v_product_ids(i).product_id, pi_products(i).units);
+        INSERT INTO ITEM_ORDERS (ORDER_ID, PRODUCT_ID, SELLING_PRICE, UNITS) VALUES (v_order_id, v_product_ids(i).product_id,v_product_prices(i).product_price, pi_products(i).units);
         
     END LOOP;
     
@@ -1376,6 +1378,39 @@ BEGIN
   END IF;
 END;
 /
+
+  
+DECLARE
+    v_products product_list_type := product_list_type(
+        product_type('Smartphone', 'Electronics', 1),
+        product_type('Milk', 'Groceries', 2)
+    );
+BEGIN
+    process_products(pi_products=>v_products, pi_customer_email=>'johndoe@email.com', pi_employee_email=>'jane@email.com');
+END;
+/
+
+DECLARE
+    v_products product_list_type := product_list_type(
+        product_type('Nike', 'Shoes', 2),
+        product_type('Retinoid', 'Cosmetics', 4),
+        product_type('Milk', 'Groceries', 3)
+    );
+BEGIN
+    process_products(pi_products=>v_products, pi_customer_email=>'jimbean@email.com', pi_employee_email=>'carter@email.com');
+END;
+/
+
+DECLARE
+    v_products product_list_type := product_list_type(
+        product_type('Nike', 'Shoes', 6),
+        product_type('Milk', 'Groceries', 2)
+    );
+BEGIN
+    process_products(pi_products=>v_products, pi_customer_email=>'jamesbarnes@email.com', pi_employee_email=>'carter@email.com');
+END;
+/
+
 
 CREATE OR REPLACE TRIGGER UPDATE_PRODUCT_QUANTITY_AFTER_PURCHASE
 AFTER INSERT ON PURCHASES
@@ -1495,7 +1530,7 @@ GRANT SELECT ON STORE_PURCHASES TO accountant_role;
 GRANT SELECT ON STORE_PURCHASES TO inventory_clerk_role;
 
 CREATE OR REPLACE VIEW STORE_ORDERS AS (
-   SELECT ORDERS.ORDER_ID, ORDERS.EMPLOYEE_ID, FIRST_NAME || ' ' || LAST_NAME AS CUSTOMER_NAME, EMAIL, TO_CHAR(TRUNC(order_date), 'DDth MON YYYY') AS order_date, PRODUCT.PRODUCT_ID, PRODUCT.NAME, PRODUCT.CATEGORY, UNITS, UNITS * SELLING_PRICE AS TOTAL_COST FROM orders inner join item_orders on orders.order_id = item_orders.order_id inner join customer on customer.customer_id = orders.customer_id INNER JOIN PRODUCT ON PRODUCT.PRODUCT_ID = ITEM_ORDERS.PRODUCT_ID
+   SELECT ORDERS.ORDER_ID, ORDERS.EMPLOYEE_ID, FIRST_NAME || ' ' || LAST_NAME AS CUSTOMER_NAME, EMAIL, TO_CHAR(TRUNC(order_date), 'DDth MON YYYY') AS order_date, PRODUCT.PRODUCT_ID, PRODUCT.NAME, PRODUCT.CATEGORY, UNITS, UNITS * ITEM_ORDERS.SELLING_PRICE AS TOTAL_COST FROM orders inner join item_orders on orders.order_id = item_orders.order_id inner join customer on customer.customer_id = orders.customer_id INNER JOIN PRODUCT ON PRODUCT.PRODUCT_ID = ITEM_ORDERS.PRODUCT_ID
 );
 
 GRANT SELECT ON STORE_ORDERS TO ACCOUNTANT;
