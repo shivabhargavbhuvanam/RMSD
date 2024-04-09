@@ -1379,6 +1379,39 @@ BEGIN
 END;
 /
 
+  
+DECLARE
+    v_products product_list_type := product_list_type(
+        product_type('Smartphone', 'Electronics', 1),
+        product_type('Milk', 'Groceries', 2)
+    );
+BEGIN
+    process_products(pi_products=>v_products, pi_customer_email=>'johndoe@email.com', pi_employee_email=>'jane@email.com');
+END;
+/
+
+DECLARE
+    v_products product_list_type := product_list_type(
+        product_type('Nike', 'Shoes', 2),
+        product_type('Retinoid', 'Cosmetics', 4),
+        product_type('Milk', 'Groceries', 3)
+    );
+BEGIN
+    process_products(pi_products=>v_products, pi_customer_email=>'jimbean@email.com', pi_employee_email=>'carter@email.com');
+END;
+/
+
+DECLARE
+    v_products product_list_type := product_list_type(
+        product_type('Nike', 'Shoes', 6),
+        product_type('Milk', 'Groceries', 2)
+    );
+BEGIN
+    process_products(pi_products=>v_products, pi_customer_email=>'jamesbarnes@email.com', pi_employee_email=>'carter@email.com');
+END;
+/
+
+
 CREATE OR REPLACE TRIGGER UPDATE_PRODUCT_QUANTITY_AFTER_PURCHASE
 AFTER INSERT ON PURCHASES
 FOR EACH ROW
