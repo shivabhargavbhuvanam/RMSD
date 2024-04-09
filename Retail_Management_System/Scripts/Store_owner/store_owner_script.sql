@@ -1579,3 +1579,107 @@ INNER JOIN PRODUCT ON TEMP.PRODUCT_ID = PRODUCT.PRODUCT_ID;
 GRANT SELECT ON PRODUCT_PROFIT_PER_SALE TO ACCOUNTANT;
 
 
+
+CREATE OR REPLACE PROCEDURE UPDATE_ORDER_RECORD(
+    pi_order_id      IN ORDERS.ORDER_ID%TYPE,
+    pi_product_id     IN PRODUCT.PRODUCT_ID%TYPE,
+    pi_updated_units IN PRODUCT.REMAINING_UNITS%TYPE
+)
+AS
+    v_order_count NUMBER;
+    v_product_count NUMBER;
+    v_order_placed NUMBER;
+    v_remaining_units NUMBER;
+    v_current_count NUMBER;
+    invalid_input EXCEPTION;
+    invalid_order EXCEPTION;
+    invalid_product EXCEPTION;
+    invalid_units EXCEPTION;
+    no_order_with_product EXCEPTION;
+    insufficient_units EXCEPTION;
+BEGIN
+
+    IF pi_order_id IS NULL OR pi_product_id IS NULL OR pi_updated_units IS NULL THEN
+        RAISE invalid_input;
+    END IF;
+    
+    SELECT COUNT(*) INTO v_order_count FROM ORDERS WHERE ORDER_ID = pi_order_id;
+    
+    IF v_order_count = 0 THEN
+        RAISE invalid_order;
+    END IF;
+
+    SELECT COUNT(*) INTO v_product_count FROM PRODUCT WHERE PRODUCT_ID = pi_product_id;
+    
+    IF v_product_count = 0 THEN
+        RAISE invalid_product;
+    END IF;
+
+    SELECT COUNT(*) INTO v_order_placed FROM ITEM_ORDERS WHERE ORDER_ID = pi_order_id AND PRODUCT_ID = pi_product_id;
+    
+    IF v_order_placed = 0 THEN
+        RAISE no_order_with_product;
+    END IF;
+    
+    SELECT REMAINING_UNITS INTO v_remaining_units FROM PRODUCT WHERE PRODUCT_ID = pi_product_id;
+    
+    
+    SELECT UNITS INTO v_current_count FROM ITEM_ORDERS WHERE ORDER_ID = pi_order_id AND PRODUCT_ID = pi_product_id;
+    
+    IF pi_updated_units < 0 THEN
+        RAISE invalid_units;
+    END IF;
+    
+    IF v_remaining_units - pi_updated_units < 0 THEN
+        RAISE insufficient_units;
+    END IF;
+    
+    UPDATE ITEM_ORDERS SET UNITS = pi_updated_units WHERE ORDER_ID = pi_order_id AND PRODUCT_ID = pi_product_id;
+    
+
+    DBMS_OUTPUT.PUT_LINE('Order updated successfully');
+
+    COMMIT;
+    
+EXCEPTION
+    WHEN invalid_input THEN
+        DBMS_OUTPUT.PUT_LINE('Error: Provide all the fields required.');
+        ROLLBACK; 
+    WHEN invalid_order THEN
+        DBMS_OUTPUT.PUT_LINE('Error: No Order Id exists');
+        ROLLBACK;
+    WHEN invalid_product THEN
+        DBMS_OUTPUT.PUT_LINE('Error: No product exists with provided product ID');
+        ROLLBACK;
+    WHEN invalid_units THEN
+        DBMS_OUTPUT.PUT_LINE('Error: Please provide positive number of units');
+        ROLLBACK;
+    WHEN no_order_with_product THEN
+        DBMS_OUTPUT.PUT_LINE('Error: Could not find a record with given order_id and product_id');
+        ROLLBACK;
+    WHEN insufficient_units THEN
+        DBMS_OUTPUT.PUT_LINE('Error: Insufficient units in stock');
+        ROLLBACK;
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('An error occurred: ' || SQLERRM);
+END UPDATE_ORDER_RECORD;
+/
+
+CREATE OR REPLACE TRIGGER after_order_update
+AFTER UPDATE ON ITEM_ORDERS
+FOR EACH ROW
+WHEN (OLD.UNITS <> NEW.UNITS)
+BEGIN
+    IF :OLD.UNITS > :NEW.UNITS THEN
+        UPDATE PRODUCT SET REMAINING_UNITS = REMAINING_UNITS + (:OLD.UNITS - :NEW.UNITS) WHERE PRODUCT_ID = :NEW.PRODUCT_ID;
+    END IF;
+    
+    IF :OLD.UNITS < :NEW.UNITS THEN
+        UPDATE PRODUCT SET REMAINING_UNITS = REMAINING_UNITS - (:NEW.UNITS - :OLD.UNITS) WHERE PRODUCT_ID = :NEW.PRODUCT_ID;
+    END IF;
+
+END;
+/
+
+
