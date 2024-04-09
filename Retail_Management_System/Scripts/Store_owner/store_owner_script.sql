@@ -590,7 +590,9 @@ CREATE OR REPLACE PROCEDURE ADD_CUSTOMER_RECORD(
 )
 AS
     v_address_id ADDRESS.ADDRESS_ID%TYPE;
+    v_customer_count INTEGER;
     invalid_input EXCEPTION;
+    customer_exists EXCEPTION;
 BEGIN
     -- Validate input arguments
     IF pi_first_name IS NULL OR pi_last_name IS NULL OR pi_email IS NULL 
@@ -598,6 +600,12 @@ BEGIN
        OR pi_city IS NULL OR pi_state IS NULL 
        OR pi_country IS NULL OR pi_postal_code IS NULL THEN
         RAISE invalid_input;
+    END IF;
+
+    -- Check if customer already exists
+    SELECT COUNT(*) INTO v_customer_count FROM CUSTOMER WHERE EMAIL = pi_email;
+    IF v_customer_count > 0 THEN
+        RAISE customer_exists;
     END IF;
 
     -- Insert into Address table
@@ -616,11 +624,15 @@ EXCEPTION
     WHEN invalid_input THEN
         ROLLBACK;
         DBMS_OUTPUT.PUT_LINE('Error: Invalid input arguments');
+    WHEN customer_exists THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error: Customer with the same email already exists');
     WHEN OTHERS THEN
         ROLLBACK;
         DBMS_OUTPUT.PUT_LINE(SQLERRM); -- Display the specific SQL error
 END ADD_CUSTOMER_RECORD;
 /
+
 
 -- Grant execute permission to appropriate roles or users
 GRANT EXECUTE ON ADD_CUSTOMER_RECORD TO manager_role;
