@@ -905,6 +905,8 @@ AS
     v_employee_id EMPLOYEE.employee_id%TYPE;
     v_employee_count INTEGER;
     invalid_input EXCEPTION;
+    invalid_email EXCEPTION;
+    email_exists  EXCEPTION;
 
 BEGIN
 
@@ -914,16 +916,13 @@ BEGIN
         RAISE invalid_input;
     END IF;
     
-    BEGIN
+    SELECT COUNT(*) INTO v_employee_count FROM EMPLOYEE WHERE EMAIL = pi_current_email;
     
-        SELECT ADDRESS_ID, EMPLOYEE_ID INTO v_address_id, v_employee_id FROM EMPLOYEE WHERE EMAIL = pi_current_email;
+    IF v_employee_count = 0 THEN
+        RAISE invalid_email;
+    END IF;
     
-    EXCEPTION
-        WHEN NO_DATA_FOUND THEN
-            DBMS_OUTPUT.PUT_LINE('Could not find employee record with specified email');
-            RAISE_APPLICATION_ERROR(-200001, 'Could not update employee ');
-    
-    END;
+    SELECT ADDRESS_ID, EMPLOYEE_ID INTO v_address_id, v_employee_id FROM EMPLOYEE WHERE EMAIL = pi_current_email;
 
     UPDATE ADDRESS 
     SET HOUSE_NUMBER = COALESCE(pi_new_house_number,HOUSE_NUMBER), 
@@ -940,8 +939,7 @@ BEGIN
         WHERE EMAIL = pi_new_email;
 
         IF v_employee_count > 0 THEN
-            DBMS_OUTPUT.PUT_LINE('New email provided already exists');
-            RAISE_APPLICATION_ERROR(-20002, 'New email provided already exists');
+            RAISE email_exists;
         END IF;
         IF v_employee_count = 0 THEN
             UPDATE EMPLOYEE SET EMAIL = pi_new_email
@@ -964,10 +962,14 @@ BEGIN
      DBMS_OUTPUT.PUT_LINE('Employee details updated successfully');
 
 EXCEPTION
-    WHEN invalid_input THEN
+     WHEN invalid_input THEN
         ROLLBACK;
         DBMS_OUTPUT.PUT_LINE('Error: You need to provide a valid existing current email');
-     WHEN OTHERS THEN
+     WHEN invalid_email THEN
+        DBMS_OUTPUT.PUT_LINE('Error: No employee found with given email');
+        ROLLBACK;
+     WHEN email_exists THEN
+        DBMS_OUTPUT.PUT_LINE('Error: The new email provided already exisits');
         ROLLBACK;
 
 END UPDATE_EMPLOYEE_RECORD;
