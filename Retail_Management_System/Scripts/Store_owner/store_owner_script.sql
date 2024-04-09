@@ -499,6 +499,7 @@ BEGIN
     SELECT COUNT(*) INTO v_vendor_count FROM VENDOR WHERE EMAIL = pi_email;
     IF v_vendor_count > 0 THEN
         RAISE vendor_exists;
+    END IF;
 
     -- Insert into Address table
     INSERT INTO ADDRESS (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE)
