@@ -247,11 +247,6 @@ CREATE ROLE sales_rep_role;
 
 -- Granting privileges to the sales_rep_role
 GRANT CREATE SESSION TO sales_rep_role;
-GRANT SELECT, INSERT ON Customer TO sales_rep_role;
-GRANT SELECT, INSERT ON Address TO sales_rep_role;
-GRANT SELECT ON Product TO sales_rep_role;
-GRANT SELECT, INSERT ON Orders TO sales_rep_role;
-GRANT SELECT, INSERT ON Item_Orders TO sales_rep_role;
 GRANT SELECT ON Current_Inventory TO sales_rep_role;
 GRANT SELECT ON Low_Stock TO sales_rep_role;
 GRANT SELECT ON Customer_Order_History TO sales_rep_role;
@@ -267,12 +262,6 @@ GRANT CREATE SESSION TO manager;
 CREATE ROLE manager_role;
 
 -- Granting privileges to manager_role
-GRANT SELECT, INSERT, UPDATE ON Customer TO manager_role;
-GRANT SELECT, INSERT, UPDATE ON Address TO manager_role;
-GRANT SELECT, INSERT, UPDATE ON Employee TO manager_role;
-GRANT SELECT, INSERT, UPDATE ON Orders TO manager_role;
-GRANT SELECT, INSERT, UPDATE ON Item_Orders TO manager_role;
-GRANT SELECT ON Product TO manager_role;
 GRANT SELECT ON Current_Inventory TO manager_role;
 GRANT SELECT ON Low_Stock TO manager_role;
 GRANT SELECT ON Customer_Order_History TO manager_role;
@@ -283,9 +272,6 @@ GRANT manager_role TO manager;
 CREATE ROLE inventory_clerk_role;
 
 -- Granting privileges to inventory_clerk_role
-GRANT SELECT, INSERT, UPDATE ON Product TO inventory_clerk_role;
-GRANT SELECT ON Purchases TO inventory_clerk_role;
-GRANT SELECT, INSERT, UPDATE ON Vendor TO inventory_clerk_role;
 GRANT SELECT ON Current_Inventory TO inventory_clerk_role;
 GRANT SELECT ON Low_Stock TO inventory_clerk_role;
 
@@ -299,9 +285,6 @@ GRANT inventory_clerk_role TO inventory_clerk;
 CREATE ROLE accountant_role;
 
 -- Granting privileges to accountant_role
-GRANT SELECT, INSERT, UPDATE ON Purchases TO accountant_role;
-GRANT SELECT ON Orders TO accountant_role;
-GRANT SELECT ON Item_Orders TO accountant_role;
 GRANT SELECT ON Product_Sales TO accountant_role;
 GRANT SELECT ON Low_Stock TO accountant_role;
 GRANT SELECT ON Weekly_Sales TO accountant_role;
