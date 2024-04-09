@@ -88,7 +88,8 @@ CREATE TABLE Vendor (
     ADDRESS_ID NUMBER,
     PHONE_NUMBER VARCHAR2(45),
     EMAIL VARCHAR2(45),
-    LAST_DATE TIMESTAMP DEFAULT NULL
+    LAST_DATE TIMESTAMP DEFAULT NULL,
+    PARTNERSHIP_DATE TIMESTAMP
 );
 
 ALTER TABLE Address ADD PRIMARY KEY (ADDRESS_ID);
@@ -488,8 +489,8 @@ BEGIN
     RETURNING ADDRESS_ID INTO vendor_address_id;
     DBMS_OUTPUT.PUT_LINE('Vendor address added successfully');
     -- Insert into Vendor table
-    INSERT INTO VENDOR (NAME, EMAIL, PHONE_NUMBER, ADDRESS_ID)
-    VALUES (pi_name, pi_email, pi_phone, vendor_address_id); -- Corrected to use pi_name instead of name
+    INSERT INTO VENDOR (NAME, EMAIL, PHONE_NUMBER, ADDRESS_ID, PARTNERSHIP_DATE)
+    VALUES (pi_name, pi_email, pi_phone, vendor_address_id, SYSTIMESTAMP); -- Corrected to use pi_name instead of name
     COMMIT;
     DBMS_OUTPUT.PUT_LINE('Vendor record added successfully');
 EXCEPTION
