@@ -296,6 +296,43 @@ GRANT CREATE SESSION TO accountant;
 GRANT accountant_role TO accountant;
 
 
+CREATE OR REPLACE FUNCTION VALIDATE_EMAIL(p_email IN VARCHAR2) RETURN BOOLEAN IS
+BEGIN
+    -- Check if the email is non-empty and contains '@' and '.'
+    IF p_email IS NOT NULL AND INSTR(p_email, '@') > 1 AND INSTR(p_email, '.', INSTR(p_email, '@')) > INSTR(p_email, '@') + 1 THEN
+        RETURN TRUE; -- Valid Email
+    ELSE
+        RETURN FALSE; -- Invalid Email
+    END IF;
+END VALIDATE_EMAIL;
+/
+
+CREATE OR REPLACE FUNCTION EMAIL_EXISTS (
+    p_email IN VARCHAR2,
+    p_table_name IN VARCHAR2
+) RETURN NUMBER IS
+    v_count NUMBER;
+    e_table_not_found EXCEPTION;
+    PRAGMA EXCEPTION_INIT(e_table_not_found, -00942); -- ORA-00942: table or view does not exist
+    e_other_errors EXCEPTION;
+BEGIN
+    EXECUTE IMMEDIATE 
+        'SELECT COUNT(*) FROM ' || p_table_name || ' WHERE EMAIL = :1'
+        INTO v_count
+        USING p_email;
+
+    RETURN v_count;
+EXCEPTION
+    WHEN e_table_not_found THEN
+        DBMS_OUTPUT.PUT_LINE('Error: Table not found.');
+        RETURN -1; -- Indicate specific error
+    WHEN e_other_errors THEN
+        DBMS_OUTPUT.PUT_LINE('An unexpected error occurred: ' || SQLERRM);
+        RETURN -2; -- Indicate other errors
+END EMAIL_EXISTS;
+/
+
+
 -- Procedures
 
 -- Procedure to add an employee record into the employee table
@@ -316,6 +353,7 @@ create or replace PROCEDURE ADD_EMPLOYEE_RECORD(
 )
 AS
     v_address_id ADDRESS.address_id%TYPE;
+    v_email_count NUMBER;
     invalid_input EXCEPTION;
     email_invalid EXCEPTION;
     email_exists EXCEPTION;
@@ -332,12 +370,16 @@ BEGIN
     END IF;
 
     -- Validate email
-    IF NOT VALIDATE_EMAIL(pi_email) THEN
+    IF pi_email IS NOT NULL AND NOT VALIDATE_EMAIL(pi_email) THEN
         RAISE email_invalid;
     END IF;
 
-    -- Check if email already exists
-    IF EMAIL_EXISTS(pi_email, 'EMPLOYEE') > 0 THEN
+    SELECT COUNT(*)
+    INTO v_email_count
+    FROM EMPLOYEE
+    WHERE EMAIL = pi_email;
+
+    IF v_email_count > 0 THEN
         RAISE email_exists;
     END IF;
 
@@ -914,7 +956,7 @@ create or replace PROCEDURE UPDATE_EMPLOYEE_RECORD(
     pi_new_house_number     IN ADDRESS.house_number%TYPE DEFAULT NULL,
     pi_new_street           IN ADDRESS.street%TYPE DEFAULT NULL,
     pi_new_city             IN ADDRESS.city%TYPE DEFAULT NULL,
-    pi_new_state            IN ADDRESS.state%type DEFAULT NULL,
+    pi_new_state            IN ADDRESS.state%TYPE DEFAULT NULL,
     pi_new_country          IN ADDRESS.country%TYPE DEFAULT NULL,
     pi_new_postal_code      IN ADDRESS.postal_code%TYPE DEFAULT NULL,
     pi_new_last_date        IN EMPLOYEE.last_date%TYPE DEFAULT NULL
@@ -923,50 +965,59 @@ AS
     v_address_id ADDRESS.address_id%TYPE;
     v_employee_id EMPLOYEE.employee_id%TYPE;
     v_employee_count INTEGER;
+    v_email_count INTEGER;
     invalid_input EXCEPTION;
     invalid_email EXCEPTION;
-    email_exists  EXCEPTION;
+    email_invalid EXCEPTION;
+    email_exists EXCEPTION;
 
 BEGIN
 
-        -- Validate input arguments
-    IF  pi_current_email IS NULL 
-    THEN
+    -- Validate current email input
+    IF pi_current_email IS NULL THEN
         RAISE invalid_input;
     END IF;
     
+    -- Check if employee with current email exists
     SELECT COUNT(*) INTO v_employee_count FROM EMPLOYEE WHERE EMAIL = pi_current_email;
-    
     IF v_employee_count = 0 THEN
         RAISE invalid_email;
     END IF;
     
+    -- Retrieve address and employee IDs
     SELECT ADDRESS_ID, EMPLOYEE_ID INTO v_address_id, v_employee_id FROM EMPLOYEE WHERE EMAIL = pi_current_email;
 
+    -- Update address details
     UPDATE ADDRESS 
-    SET HOUSE_NUMBER = COALESCE(pi_new_house_number,HOUSE_NUMBER), 
-        STREET       = COALESCE(pi_new_street,STREET), 
-        CITY         = COALESCE(pi_new_city,CITY), 
-        STATE        = COALESCE(pi_new_state,STATE), 
-        COUNTRY      = COALESCE(pi_new_country,COUNTRY), 
-        POSTAL_CODE  = COALESCE(pi_new_postal_code,POSTAL_CODE)
+    SET HOUSE_NUMBER = COALESCE(pi_new_house_number, HOUSE_NUMBER), 
+        STREET       = COALESCE(pi_new_street, STREET), 
+        CITY         = COALESCE(pi_new_city, CITY), 
+        STATE        = COALESCE(pi_new_state, STATE), 
+        COUNTRY      = COALESCE(pi_new_country, COUNTRY), 
+        POSTAL_CODE  = COALESCE(pi_new_postal_code, POSTAL_CODE)
     WHERE ADDRESS_ID = v_address_id;
     
+    -- Validate and update new email, if provided
     IF pi_new_email IS NOT NULL THEN
-        SELECT COUNT(*) INTO v_employee_count
+        IF NOT VALIDATE_EMAIL(pi_new_email) THEN
+            RAISE email_invalid;
+        END IF;
+        
+        -- Check if new email already exists in EMPLOYEE table
+        SELECT COUNT(*) INTO v_email_count
         FROM EMPLOYEE
         WHERE EMAIL = pi_new_email;
-
-        IF v_employee_count > 0 THEN
+        
+        IF v_email_count > 0 THEN
             RAISE email_exists;
         END IF;
-        IF v_employee_count = 0 THEN
-            UPDATE EMPLOYEE SET EMAIL = pi_new_email
-                WHERE EMAIL = pi_current_email;
-        END IF;
+
+        UPDATE EMPLOYEE SET EMAIL = pi_new_email
+            WHERE EMAIL = pi_current_email;
     END IF;
     
-    UPDATE Employee
+    -- Update other employee details
+    UPDATE EMPLOYEE
     SET FIRST_NAME   = COALESCE(pi_new_first_name, FIRST_NAME),
         LAST_NAME    = COALESCE(pi_new_last_name, LAST_NAME),
         PHONE_NUMBER = COALESCE(pi_new_phone, PHONE_NUMBER),
@@ -977,22 +1028,27 @@ BEGIN
     WHERE EMPLOYEE_ID = v_employee_id;
 
     COMMIT;
-
-     DBMS_OUTPUT.PUT_LINE('Employee details updated successfully');
+    DBMS_OUTPUT.PUT_LINE('Employee details updated successfully');
 
 EXCEPTION
-     WHEN invalid_input THEN
+    WHEN invalid_input THEN
         ROLLBACK;
         DBMS_OUTPUT.PUT_LINE('Error: You need to provide a valid existing current email');
-     WHEN invalid_email THEN
+    WHEN invalid_email THEN
+        ROLLBACK;
         DBMS_OUTPUT.PUT_LINE('Error: No employee found with given email');
+    WHEN email_invalid THEN
         ROLLBACK;
-     WHEN email_exists THEN
-        DBMS_OUTPUT.PUT_LINE('Error: The new email provided already exisits');
+        DBMS_OUTPUT.PUT_LINE('Error: Invalid email format');
+    WHEN email_exists THEN
         ROLLBACK;
-
+        DBMS_OUTPUT.PUT_LINE('Error: The new email provided already exists');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('An unexpected error occurred: ' || SQLERRM);
 END UPDATE_EMPLOYEE_RECORD;
 /
+
 
 GRANT EXECUTE ON UPDATE_EMPLOYEE_RECORD TO MANAGER_ROLE;
 
@@ -1071,46 +1127,6 @@ END UPDATE_VENDOR_RECORD;
 
 GRANT EXECUTE ON UPDATE_VENDOR_RECORD TO MANAGER_ROLE;
 
-
-CREATE OR REPLACE FUNCTION VALIDATE_EMAIL(p_email IN VARCHAR2) RETURN BOOLEAN IS
-BEGIN
-    -- Check if the email is non-empty and contains '@' and '.'
-    IF p_email IS NOT NULL AND INSTR(p_email, '@') > 1 AND INSTR(p_email, '.', INSTR(p_email, '@')) > INSTR(p_email, '@') + 1 THEN
-        RETURN TRUE; -- Valid Email
-    ELSE
-        RETURN FALSE; -- Invalid Email
-    END IF;
-END VALIDATE_EMAIL;
-/
-
-CREATE OR REPLACE FUNCTION EMAIL_EXISTS (
-    p_email IN VARCHAR2,
-    p_table_name IN VARCHAR2
-) RETURN NUMBER IS
-    v_email_count NUMBER;
-    e_table_or_column_not_found EXCEPTION;
-    PRAGMA EXCEPTION_INIT(e_table_or_column_not_found, -00942); -- ORA-00942: table or view does not exist
-    e_other_errors EXCEPTION;
-BEGIN
-    EXECUTE IMMEDIATE 
-        'SELECT COUNT(*) FROM ' || p_table_name || ' WHERE EMAIL = :1'
-        INTO v_email_count
-        USING p_email;
-
-    IF v_email_count > 0 THEN
-        RETURN 1;  -- Email exists
-    ELSE
-        RETURN 0;  -- Email does not exist
-    END IF;
-EXCEPTION
-    WHEN e_table_or_column_not_found THEN
-        DBMS_OUTPUT.PUT_LINE('Error: Table or column not found.');
-        RETURN -1; -- Indicate specific error
-    WHEN e_other_errors THEN
-        DBMS_OUTPUT.PUT_LINE('An unexpected error occurred: ' || SQLERRM);
-        RETURN -2; -- Indicate other errors
-END EMAIL_EXISTS;
-/
 
 
 CREATE OR REPLACE PROCEDURE UPDATE_CUSTOMER_RECORD(
@@ -1584,5 +1600,3 @@ FROM TEMP
 INNER JOIN PRODUCT ON TEMP.PRODUCT_ID = PRODUCT.PRODUCT_ID;
 
 GRANT SELECT ON PRODUCT_PROFIT_PER_SALE TO ACCOUNTANT;
-
-
