@@ -862,27 +862,27 @@ INSERT INTO Item_Orders (ORDER_ID, PRODUCT_ID, UNITS) VALUES (4, 5, 3);
 INSERT INTO Item_Orders (ORDER_ID, PRODUCT_ID, UNITS) VALUES (5, 2, 8);
 
 BEGIN
-    PROCESS_PURCHASE(pi_vendor_id => 1, pi_product_id => 1, pi_units => 50, pi_buying_price => 12500.00 );
+    PROCESS_PURCHASE(pi_vendor_id => 1, pi_product_id => 1, pi_units => 50, pi_buying_price => 17.99 );
 END;
 /
 
 BEGIN
-    PROCESS_PURCHASE(pi_vendor_id => 2, pi_product_id => 2, pi_units => 150, pi_buying_price => 2250.00 );
+    PROCESS_PURCHASE(pi_vendor_id => 2, pi_product_id => 2, pi_units => 150, pi_buying_price => 2.45 );
 END;
 /
 
 BEGIN
-    PROCESS_PURCHASE(pi_vendor_id => 3, pi_product_id => 3, pi_units => 200, pi_buying_price => 200.00 );
+    PROCESS_PURCHASE(pi_vendor_id => 3, pi_product_id => 3, pi_units => 200, pi_buying_price => 8.19 );
 END;
 /
 
 BEGIN
-    PROCESS_PURCHASE(pi_vendor_id => 4, pi_product_id => 4, pi_units => 150, pi_buying_price => 900.00 );
+    PROCESS_PURCHASE(pi_vendor_id => 4, pi_product_id => 4, pi_units => 150, pi_buying_price => 34.89 );
 END;
 /
 
 BEGIN
-    PROCESS_PURCHASE(pi_vendor_id => 5, pi_product_id => 5, pi_units => 50, pi_buying_price => 1900.00 );
+    PROCESS_PURCHASE(pi_vendor_id => 5, pi_product_id => 5, pi_units => 50, pi_buying_price => 295.99 );
 END;
 /
 
@@ -1498,3 +1498,24 @@ CREATE OR REPLACE VIEW STORE_ORDERS AS (
 );
 
 GRANT SELECT ON STORE_ORDERS TO ACCOUNTANT;
+
+
+CREATE OR REPLACE VIEW PRODUCT_PROFIT_PER_SALE AS
+WITH TEMP AS (
+    SELECT PRODUCT_ID, 
+           SUM(BUYING_PRICE)/COUNT(BUYING_PRICE) AS AVG_BUYING_PRICE 
+    FROM PURCHASES
+    GROUP BY PRODUCT_ID
+)
+SELECT TEMP.PRODUCT_ID, 
+       PRODUCT.CATEGORY, 
+       PRODUCT.NAME, 
+       TEMP.AVG_BUYING_PRICE, 
+       PRODUCT.SELLING_PRICE, 
+       ROUND(100 * (PRODUCT.SELLING_PRICE - TEMP.AVG_BUYING_PRICE) / TEMP.AVG_BUYING_PRICE, 3) || '%' AS PROFIT_PER_SALE 
+FROM TEMP 
+INNER JOIN PRODUCT ON TEMP.PRODUCT_ID = PRODUCT.PRODUCT_ID;
+
+GRANT SELECT ON PRODUCT_PROFIT_PER_SALE TO ACCOUNTANT;
+
+
