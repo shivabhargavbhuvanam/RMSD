@@ -310,23 +310,35 @@ create or replace PROCEDURE ADD_EMPLOYEE_RECORD(
     pi_house_number     IN ADDRESS.house_number%TYPE,
     pi_street           IN ADDRESS.street%TYPE,
     pi_city             IN ADDRESS.city%TYPE,
-    pi_state            IN ADDRESS.state%type,
+    pi_state            IN ADDRESS.state%TYPE,
     pi_country          IN ADDRESS.country%TYPE,
     pi_postal_code      IN ADDRESS.postal_code%TYPE
 )
 AS
     v_address_id ADDRESS.address_id%TYPE;
     invalid_input EXCEPTION;
+    email_invalid EXCEPTION;
+    email_exists EXCEPTION;
 
 BEGIN
 
-        -- Validate input arguments
+    -- Validate input arguments
     IF pi_first_name IS NULL OR pi_last_name IS NULL OR pi_email IS NULL 
         OR pi_phone IS NULL OR pi_hiring_date IS NULL 
         OR pi_house_number IS NULL OR pi_street IS NULL OR pi_role IS NULL or pi_wage IS NULL
         OR pi_city IS NULL OR pi_state IS NULL 
         OR pi_country IS NULL OR pi_postal_code IS NULL THEN
         RAISE invalid_input;
+    END IF;
+
+    -- Validate email
+    IF NOT VALIDATE_EMAIL(pi_email) THEN
+        RAISE email_invalid;
+    END IF;
+
+    -- Check if email already exists
+    IF EMAIL_EXISTS(pi_email, 'EMPLOYEE') > 0 THEN
+        RAISE email_exists;
     END IF;
 
     -- Insert into Address table
@@ -342,18 +354,25 @@ BEGIN
 
     COMMIT;
 
-     DBMS_OUTPUT.PUT_LINE('Employee record added successfully');
+    DBMS_OUTPUT.PUT_LINE('Employee record added successfully');
 
 EXCEPTION
     WHEN invalid_input THEN
         ROLLBACK;
         DBMS_OUTPUT.PUT_LINE('Error: Invalid input arguments');
-     WHEN OTHERS THEN
+    WHEN email_invalid THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Error: Invalid email format');
+    WHEN email_exists THEN
         ROLLBACK;
         DBMS_OUTPUT.PUT_LINE('Error: Email already exists');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('An unexpected error occurred: ' || SQLERRM);
 
 END ADD_EMPLOYEE_RECORD;
 /
+
 
 GRANT EXECUTE ON ADD_EMPLOYEE_RECORD TO MANAGER_ROLE;
 
