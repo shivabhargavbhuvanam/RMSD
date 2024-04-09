@@ -485,6 +485,8 @@ CREATE OR REPLACE PROCEDURE ADD_VENDOR_RECORD(
 )
 AS
     vendor_address_id ADDRESS.ADDRESS_ID%TYPE;
+    v_vendor_count INTEGER;
+    vendor_exists EXCEPTION;
     invalid_input EXCEPTION;
 BEGIN
     IF pi_name IS NULL OR pi_email IS NULL OR pi_phone IS NULL
@@ -493,7 +495,11 @@ BEGIN
         OR pi_country IS NULL OR pi_postal_code IS NULL THEN
         RAISE invalid_input;
     END IF;
-    
+
+    SELECT COUNT(*) INTO v_vendor_count FROM VENDOR WHERE EMAIL = pi_email;
+    IF v_vendor_count > 0 THEN
+        RAISE vendor_exists;
+
     -- Insert into Address table
     INSERT INTO ADDRESS (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE)
     VALUES (pi_house_number, pi_street, pi_city, pi_state, pi_country, pi_postal_code)
@@ -508,6 +514,8 @@ EXCEPTION
     WHEN invalid_input THEN
         ROLLBACK;
         DBMS_OUTPUT.PUT_LINE('Error: Invalid input arguments');
+    WHEN vendor_exists THEN
+        DBMS_OUTPUT.PUT_LINE('Vendor record already exists');
     WHEN OTHERS THEN
         ROLLBACK;
         DBMS_OUTPUT.PUT_LINE('Error has occurred during procedure execution');
@@ -746,6 +754,7 @@ AS
      v_remaining_units INTEGER;
      v_vendor_id INTEGER;
      v_product_id INTEGER;
+     invalid_input EXCEPTION;
 BEGIN
     BEGIN
       SELECT vendor_id
@@ -755,7 +764,7 @@ BEGIN
     EXCEPTION
       WHEN NO_DATA_FOUND THEN
         DBMS_OUTPUT.PUT_LINE('Could not find vendor for id: ' || pi_vendor_id);
-        RAISE_APPLICATION_ERROR(-20003, 'vendor not found for id: ' || pi_vendor_id);
+        RETURN;
     END;
     BEGIN
       SELECT product_id
@@ -765,16 +774,16 @@ BEGIN
     EXCEPTION
       WHEN NO_DATA_FOUND THEN
         DBMS_OUTPUT.PUT_LINE('Could not find product for id: ' || pi_product_id);
-        RAISE_APPLICATION_ERROR(-20003, 'product not found for id: ' || pi_product_id);
+        RETURN;
     END;
     IF pi_units<1 THEN
         DBMS_OUTPUT.PUT_LINE('Provide valid count of products bought');
-        RAISE_APPLICATION_ERROR(-20001, 'Invalid quantity of product bought' || pi_units);
+        RETURN;
     END IF;  
     
     IF pi_buying_price<0 THEN
         DBMS_OUTPUT.PUT_LINE('Provide valid buying price of product bought');
-        RAISE_APPLICATION_ERROR(-20001, 'Invalid buying price of product bought' || pi_buying_price);
+        RETURN;
     END IF;
     
     INSERT INTO PURCHASES (VENDOR_ID, PRODUCT_ID, PURCHASE_DATE, QUANTITY, BUYING_PRICE) VALUES (v_vendor_id, v_product_id, SYSTIMESTAMP, pi_units, pi_buying_price);
@@ -782,7 +791,9 @@ BEGIN
     COMMIT;
     
     DBMS_OUTPUT.PUT_LINE('Sucessfully recorded purchase');
-    
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('An unexpected error occurred');    
 END PROCESS_PURCHASE;
 /
 GRANT EXECUTE ON PROCESS_PURCHASE TO inventory_clerk_role;
