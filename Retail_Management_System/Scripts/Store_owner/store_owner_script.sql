@@ -1818,3 +1818,111 @@ BEGIN
 END;
 /
 
+CREATE OR REPLACE FUNCTION GET_SALES_REPORT(
+    p_time_frame VARCHAR2, 
+    p_start_date DATE
+) RETURN SYS_REFCURSOR 
+IS
+    v_query VARCHAR2(1000);
+    v_sales_cursor SYS_REFCURSOR;
+BEGIN
+    -- Build the query based on the time frame
+    IF p_time_frame = 'WEEK' THEN
+        v_query := 'SELECT TO_CHAR(o.ORDER_DATE, ''IW'') AS WEEK, SUM(io.SELLING_PRICE * io.UNITS) AS TOTAL_SALES 
+                    FROM Orders o 
+                    JOIN Item_Orders io ON o.ORDER_ID = io.ORDER_ID 
+                    WHERE o.ORDER_DATE >= :p_start_date 
+                    GROUP BY TO_CHAR(o.ORDER_DATE, ''IW'') 
+                    ORDER BY WEEK';
+    ELSIF p_time_frame = 'MONTH' THEN
+        v_query := 'SELECT TO_CHAR(o.ORDER_DATE, ''YYYY-MM'') AS MONTH, SUM(io.SELLING_PRICE * io.UNITS) AS TOTAL_SALES 
+                    FROM Orders o 
+                    JOIN Item_Orders io ON o.ORDER_ID = io.ORDER_ID 
+                    WHERE o.ORDER_DATE >= :p_start_date 
+                    GROUP BY TO_CHAR(o.ORDER_DATE, ''YYYY-MM'') 
+                    ORDER BY MONTH';
+    ELSIF p_time_frame = 'YEAR' THEN
+        v_query := 'SELECT TO_CHAR(o.ORDER_DATE, ''YYYY'') AS YEAR, SUM(io.SELLING_PRICE * io.UNITS) AS TOTAL_SALES 
+                    FROM Orders o 
+                    JOIN Item_Orders io ON o.ORDER_ID = io.ORDER_ID 
+                    WHERE o.ORDER_DATE >= :p_start_date 
+                    GROUP BY TO_CHAR(o.ORDER_DATE, ''YYYY'') 
+                    ORDER BY YEAR';
+    ELSE
+        RAISE_APPLICATION_ERROR(-20001, 'Invalid time frame. Please specify ''WEEK'', ''MONTH'', or ''YEAR''.');
+    END IF;
+
+    -- Open the ref cursor and execute the query
+    OPEN v_sales_cursor FOR v_query USING p_start_date;
+    RETURN v_sales_cursor;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE;
+END GET_SALES_REPORT;
+/
+
+-- Weekly Sales Report Procedure
+CREATE OR REPLACE PROCEDURE GET_WEEKLY_SALES_REPORT(p_start_date DATE) IS
+    v_report_cursor SYS_REFCURSOR;
+    v_week VARCHAR2(10);
+    v_total_sales NUMBER;
+BEGIN
+    v_report_cursor := GET_SALES_REPORT('WEEK', p_start_date);
+
+    LOOP
+        FETCH v_report_cursor INTO v_week, v_total_sales;
+        EXIT WHEN v_report_cursor%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE('Week: ' || v_week || ' Total Sales: ' || v_total_sales);
+    END LOOP;
+
+    CLOSE v_report_cursor;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error in GET_WEEKLY_SALES_REPORT: ' || SQLERRM);
+END GET_WEEKLY_SALES_REPORT;
+/
+
+-- Monthly Sales Report Procedure
+CREATE OR REPLACE PROCEDURE GET_MONTHLY_SALES_REPORT(p_start_date DATE) IS
+    v_report_cursor SYS_REFCURSOR;
+    v_month VARCHAR2(15);
+    v_total_sales NUMBER;
+BEGIN
+    v_report_cursor := GET_SALES_REPORT('MONTH', p_start_date);
+
+    LOOP
+        FETCH v_report_cursor INTO v_month, v_total_sales;
+        EXIT WHEN v_report_cursor%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE('Month: ' || v_month || ' Total Sales: ' || v_total_sales);
+    END LOOP;
+
+    CLOSE v_report_cursor;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error in GET_MONTHLY_SALES_REPORT: ' || SQLERRM);
+END GET_MONTHLY_SALES_REPORT;
+/
+
+-- Yearly Sales Report Procedure
+CREATE OR REPLACE PROCEDURE GET_YEARLY_SALES_REPORT(p_start_date DATE) IS
+    v_report_cursor SYS_REFCURSOR;
+    v_year VARCHAR2(10);
+    v_total_sales NUMBER;
+BEGIN
+    v_report_cursor := GET_SALES_REPORT('YEAR', p_start_date);
+
+    LOOP
+        FETCH v_report_cursor INTO v_year, v_total_sales;
+        EXIT WHEN v_report_cursor%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE('Year: ' || v_year || ' Total Sales: ' || v_total_sales);
+    END LOOP;
+
+    CLOSE v_report_cursor;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error in GET_YEARLY_SALES_REPORT: ' || SQLERRM);
+END GET_YEARLY_SALES_REPORT;
+/
+
+
+
