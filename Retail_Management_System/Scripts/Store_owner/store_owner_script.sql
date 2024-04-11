@@ -1684,3 +1684,103 @@ END;
 
 GRANT EXECUTE ON UPDATE_ORDER_RECORD TO sales_rep_role;
 GRANT EXECUTE ON UPDATE_ORDER_RECORD TO manager_role;
+
+
+CREATE OR REPLACE PROCEDURE UPDATE_PURCHASE (
+    
+    pi_transaction_id   IN PURCHASES.TRANSACTION_ID%TYPE,
+    pi_new_quantity     IN PURCHASES.TRANSACTION_ID%TYPE DEFAULT NULL,
+    pi_new_buying_price IN PURCHASES.BUYING_PRICE%TYPE DEFAULT NULL
+
+) 
+AS
+    v_transaction_count NUMBER;
+    v_current_quantity NUMBER;
+    v_product_id NUMBER;
+    v_remaning_units NUMBER;
+    e_invalid_input EXCEPTION;
+    e_transaction_not_found EXCEPTION;
+    e_invalid_quantity EXCEPTION;
+    e_invalid_buying_price EXCEPTION;
+    e_contact_owner EXCEPTION;
+    
+BEGIN
+
+    IF pi_new_quantity IS NULL AND pi_new_buying_price IS NULL THEN
+        RAISE e_invalid_input;
+    END IF;
+
+    SELECT COUNT(*) INTO v_transaction_count FROM PURCHASES WHERE TRANSACTION_ID = pi_transaction_id;
+    
+    IF v_transaction_count = 0 THEN
+        RAISE e_transaction_not_found;
+    END IF;
+
+    
+    IF pi_new_quantity < 0 THEN
+        RAISE e_invalid_quantity;
+    END IF;
+    
+    IF pi_new_buying_price < 0 THEN
+        RAISE e_invalid_buying_price;
+    END IF;
+    
+    IF pi_new_quantity IS NOT NULL THEN
+    
+        SELECT PRODUCT_ID, QUANTITY INTO v_product_id, v_current_quantity FROM PURCHASES WHERE TRANSACTION_ID = pi_transaction_id;
+        
+        SELECT REMAINING_UNITS INTO v_remaning_units FROM PRODUCT WHERE PRODUCT_ID = v_product_id;
+        
+        IF pi_new_quantity < v_current_quantity AND v_remaning_units - (v_current_quantity - pi_new_quantity) < 0 THEN
+        
+            RAISE e_contact_owner;
+        END IF;
+    
+    END IF;
+    
+    
+    
+    UPDATE PURCHASES SET QUANTITY = NVL(pi_new_quantity, QUANTITY), BUYING_PRICE = NVL(pi_new_buying_price, BUYING_PRICE)
+        WHERE TRANSACTION_ID = pi_transaction_id;
+    
+    DBMS_OUTPUT.PUT_LINE('Transaction updated successfully');
+    
+    COMMIT;
+
+EXCEPTION
+    
+    WHEN e_invalid_input THEN 
+      DBMS_OUTPUT.PUT_LINE('Specify atleast one of the following : pi_new_buying_price or pi_new_quantity');
+    
+    WHEN e_invalid_quantity THEN
+      DBMS_OUTPUT.PUT_LINE('Quantity cannot be less than 0');
+    
+    WHEN e_invalid_buying_price THEN
+      DBMS_OUTPUT.PUT_LINE('Price cannot be less than 0');
+    
+    WHEN e_transaction_not_found THEN
+      DBMS_OUTPUT.PUT_LINE('Invalid transaction ID');
+    
+    WHEN e_contact_owner THEN
+      DBMS_OUTPUT.PUT_LINE('Could not process the update. The product stock will go to negative. Please contact the store owner.');
+
+
+END;
+/
+
+
+CREATE OR REPLACE TRIGGER AFTER_PURCHASES_UPDATE
+AFTER UPDATE ON PURCHASES
+FOR EACH ROW
+WHEN (OLD.QUANTITY <> NEW.QUANTITY)
+BEGIN
+    IF :OLD.QUANTITY > :NEW.QUANTITY THEN
+        UPDATE PRODUCT SET REMAINING_UNITS = REMAINING_UNITS - (:OLD.QUANTITY - :NEW.QUANTITY) WHERE PRODUCT_ID = :NEW.PRODUCT_ID;
+    END IF;
+    
+    IF :OLD.QUANTITY < :NEW.QUANTITY THEN
+        UPDATE PRODUCT SET REMAINING_UNITS = REMAINING_UNITS + (:NEW.QUANTITY - :OLD.QUANTITY) WHERE PRODUCT_ID = :NEW.PRODUCT_ID;
+    END IF;
+
+END;
+/
