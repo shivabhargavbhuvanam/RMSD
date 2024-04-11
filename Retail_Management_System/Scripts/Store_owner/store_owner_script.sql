@@ -546,6 +546,8 @@ CREATE OR REPLACE PROCEDURE ADD_VENDOR_RECORD(
 )
 AS
     vendor_address_id ADDRESS.ADDRESS_ID%TYPE;
+    v_vendor_count INTEGER;
+    vendor_exists EXCEPTION;
     invalid_input EXCEPTION;
 BEGIN
     IF pi_name IS NULL OR pi_email IS NULL OR pi_phone IS NULL
@@ -554,7 +556,12 @@ BEGIN
         OR pi_country IS NULL OR pi_postal_code IS NULL THEN
         RAISE invalid_input;
     END IF;
-    
+
+    SELECT COUNT(*) INTO v_vendor_count FROM VENDOR WHERE EMAIL = pi_email;
+    IF v_vendor_count > 0 THEN
+        RAISE vendor_exists;
+    END IF;
+
     -- Insert into Address table
     INSERT INTO ADDRESS (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE)
     VALUES (pi_house_number, pi_street, pi_city, pi_state, pi_country, pi_postal_code)
@@ -569,6 +576,8 @@ EXCEPTION
     WHEN invalid_input THEN
         ROLLBACK;
         DBMS_OUTPUT.PUT_LINE('Error: Invalid input arguments');
+    WHEN vendor_exists THEN
+        DBMS_OUTPUT.PUT_LINE('Vendor record already exists');
     WHEN OTHERS THEN
         ROLLBACK;
         DBMS_OUTPUT.PUT_LINE('Error has occurred during procedure execution');
@@ -807,6 +816,7 @@ AS
      v_remaining_units INTEGER;
      v_vendor_id INTEGER;
      v_product_id INTEGER;
+     invalid_input EXCEPTION;
 BEGIN
     BEGIN
       SELECT vendor_id
@@ -816,7 +826,7 @@ BEGIN
     EXCEPTION
       WHEN NO_DATA_FOUND THEN
         DBMS_OUTPUT.PUT_LINE('Could not find vendor for id: ' || pi_vendor_id);
-        RAISE_APPLICATION_ERROR(-20003, 'vendor not found for id: ' || pi_vendor_id);
+        RETURN;
     END;
     BEGIN
       SELECT product_id
@@ -826,16 +836,16 @@ BEGIN
     EXCEPTION
       WHEN NO_DATA_FOUND THEN
         DBMS_OUTPUT.PUT_LINE('Could not find product for id: ' || pi_product_id);
-        RAISE_APPLICATION_ERROR(-20003, 'product not found for id: ' || pi_product_id);
+        RETURN;
     END;
     IF pi_units<1 THEN
         DBMS_OUTPUT.PUT_LINE('Provide valid count of products bought');
-        RAISE_APPLICATION_ERROR(-20001, 'Invalid quantity of product bought' || pi_units);
+        RETURN;
     END IF;  
     
     IF pi_buying_price<0 THEN
         DBMS_OUTPUT.PUT_LINE('Provide valid buying price of product bought');
-        RAISE_APPLICATION_ERROR(-20001, 'Invalid buying price of product bought' || pi_buying_price);
+        RETURN;
     END IF;
     
     INSERT INTO PURCHASES (VENDOR_ID, PRODUCT_ID, PURCHASE_DATE, QUANTITY, BUYING_PRICE) VALUES (v_vendor_id, v_product_id, SYSTIMESTAMP, pi_units, pi_buying_price);
@@ -843,7 +853,9 @@ BEGIN
     COMMIT;
     
     DBMS_OUTPUT.PUT_LINE('Sucessfully recorded purchase');
-    
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('An unexpected error occurred');    
 END PROCESS_PURCHASE;
 /
 GRANT EXECUTE ON PROCESS_PURCHASE TO inventory_clerk_role;
@@ -1600,3 +1612,209 @@ FROM TEMP
 INNER JOIN PRODUCT ON TEMP.PRODUCT_ID = PRODUCT.PRODUCT_ID;
 
 GRANT SELECT ON PRODUCT_PROFIT_PER_SALE TO ACCOUNTANT;
+
+CREATE OR REPLACE PROCEDURE UPDATE_ORDER_RECORD(
+    pi_order_id      IN ORDERS.ORDER_ID%TYPE,
+    pi_product_id     IN PRODUCT.PRODUCT_ID%TYPE,
+    pi_updated_units IN PRODUCT.REMAINING_UNITS%TYPE
+)
+AS
+    v_order_count NUMBER;
+    v_product_count NUMBER;
+    v_order_placed NUMBER;
+    v_remaining_units NUMBER;
+    v_current_count NUMBER;
+    invalid_input EXCEPTION;
+    invalid_order EXCEPTION;
+    invalid_product EXCEPTION;
+    invalid_units EXCEPTION;
+    no_order_with_product EXCEPTION;
+    insufficient_units EXCEPTION;
+BEGIN
+
+    IF pi_order_id IS NULL OR pi_product_id IS NULL OR pi_updated_units IS NULL THEN
+        RAISE invalid_input;
+    END IF;
+    
+    SELECT COUNT(*) INTO v_order_count FROM ORDERS WHERE ORDER_ID = pi_order_id;
+    
+    IF v_order_count = 0 THEN
+        RAISE invalid_order;
+    END IF;
+
+    SELECT COUNT(*) INTO v_product_count FROM PRODUCT WHERE PRODUCT_ID = pi_product_id;
+    
+    IF v_product_count = 0 THEN
+        RAISE invalid_product;
+    END IF;
+
+    SELECT COUNT(*) INTO v_order_placed FROM ITEM_ORDERS WHERE ORDER_ID = pi_order_id AND PRODUCT_ID = pi_product_id;
+    
+    IF v_order_placed = 0 THEN
+        RAISE no_order_with_product;
+    END IF;
+    
+    SELECT REMAINING_UNITS INTO v_remaining_units FROM PRODUCT WHERE PRODUCT_ID = pi_product_id;
+    
+    
+    SELECT UNITS INTO v_current_count FROM ITEM_ORDERS WHERE ORDER_ID = pi_order_id AND PRODUCT_ID = pi_product_id;
+    
+    IF pi_updated_units < 0 THEN
+        RAISE invalid_units;
+    END IF;
+    
+    IF v_remaining_units - pi_updated_units < 0 THEN
+        RAISE insufficient_units;
+    END IF;
+    
+    UPDATE ITEM_ORDERS SET UNITS = pi_updated_units WHERE ORDER_ID = pi_order_id AND PRODUCT_ID = pi_product_id;
+    
+
+    DBMS_OUTPUT.PUT_LINE('Order updated successfully');
+
+    COMMIT;
+    
+EXCEPTION
+    WHEN invalid_input THEN
+        DBMS_OUTPUT.PUT_LINE('Error: Provide all the fields required.');
+        ROLLBACK; 
+    WHEN invalid_order THEN
+        DBMS_OUTPUT.PUT_LINE('Error: No Order Id exists');
+        ROLLBACK;
+    WHEN invalid_product THEN
+        DBMS_OUTPUT.PUT_LINE('Error: No product exists with provided product ID');
+        ROLLBACK;
+    WHEN invalid_units THEN
+        DBMS_OUTPUT.PUT_LINE('Error: Please provide positive number of units');
+        ROLLBACK;
+    WHEN no_order_with_product THEN
+        DBMS_OUTPUT.PUT_LINE('Error: Could not find a record with given order_id and product_id');
+        ROLLBACK;
+    WHEN insufficient_units THEN
+        DBMS_OUTPUT.PUT_LINE('Error: Insufficient units in stock');
+        ROLLBACK;
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('An error occurred: ' || SQLERRM);
+END UPDATE_ORDER_RECORD;
+/
+
+CREATE OR REPLACE TRIGGER after_order_update
+AFTER UPDATE ON ITEM_ORDERS
+FOR EACH ROW
+WHEN (OLD.UNITS <> NEW.UNITS)
+BEGIN
+    IF :OLD.UNITS > :NEW.UNITS THEN
+        UPDATE PRODUCT SET REMAINING_UNITS = REMAINING_UNITS + (:OLD.UNITS - :NEW.UNITS) WHERE PRODUCT_ID = :NEW.PRODUCT_ID;
+    END IF;
+    
+    IF :OLD.UNITS < :NEW.UNITS THEN
+        UPDATE PRODUCT SET REMAINING_UNITS = REMAINING_UNITS - (:NEW.UNITS - :OLD.UNITS) WHERE PRODUCT_ID = :NEW.PRODUCT_ID;
+    END IF;
+
+END;
+/
+
+GRANT EXECUTE ON UPDATE_ORDER_RECORD TO sales_rep_role;
+GRANT EXECUTE ON UPDATE_ORDER_RECORD TO manager_role;
+
+
+CREATE OR REPLACE PROCEDURE UPDATE_PURCHASE (
+    
+    pi_transaction_id   IN PURCHASES.TRANSACTION_ID%TYPE,
+    pi_new_quantity     IN PURCHASES.TRANSACTION_ID%TYPE DEFAULT NULL,
+    pi_new_buying_price IN PURCHASES.BUYING_PRICE%TYPE DEFAULT NULL
+
+) 
+AS
+    v_transaction_count NUMBER;
+    v_current_quantity NUMBER;
+    v_product_id NUMBER;
+    v_remaning_units NUMBER;
+    e_invalid_input EXCEPTION;
+    e_transaction_not_found EXCEPTION;
+    e_invalid_quantity EXCEPTION;
+    e_invalid_buying_price EXCEPTION;
+    e_contact_owner EXCEPTION;
+    
+BEGIN
+
+    IF pi_new_quantity IS NULL AND pi_new_buying_price IS NULL THEN
+        RAISE e_invalid_input;
+    END IF;
+
+    SELECT COUNT(*) INTO v_transaction_count FROM PURCHASES WHERE TRANSACTION_ID = pi_transaction_id;
+    
+    IF v_transaction_count = 0 THEN
+        RAISE e_transaction_not_found;
+    END IF;
+
+    
+    IF pi_new_quantity < 0 THEN
+        RAISE e_invalid_quantity;
+    END IF;
+    
+    IF pi_new_buying_price < 0 THEN
+        RAISE e_invalid_buying_price;
+    END IF;
+    
+    IF pi_new_quantity IS NOT NULL THEN
+    
+        SELECT PRODUCT_ID, QUANTITY INTO v_product_id, v_current_quantity FROM PURCHASES WHERE TRANSACTION_ID = pi_transaction_id;
+        
+        SELECT REMAINING_UNITS INTO v_remaning_units FROM PRODUCT WHERE PRODUCT_ID = v_product_id;
+        
+        IF pi_new_quantity < v_current_quantity AND v_remaning_units - (v_current_quantity - pi_new_quantity) < 0 THEN
+        
+            RAISE e_contact_owner;
+        END IF;
+    
+    END IF;
+    
+    
+    
+    UPDATE PURCHASES SET QUANTITY = NVL(pi_new_quantity, QUANTITY), BUYING_PRICE = NVL(pi_new_buying_price, BUYING_PRICE)
+        WHERE TRANSACTION_ID = pi_transaction_id;
+    
+    DBMS_OUTPUT.PUT_LINE('Transaction updated successfully');
+    
+    COMMIT;
+
+EXCEPTION
+    
+    WHEN e_invalid_input THEN 
+      DBMS_OUTPUT.PUT_LINE('Specify atleast one of the following : pi_new_buying_price or pi_new_quantity');
+    
+    WHEN e_invalid_quantity THEN
+      DBMS_OUTPUT.PUT_LINE('Quantity cannot be less than 0');
+    
+    WHEN e_invalid_buying_price THEN
+      DBMS_OUTPUT.PUT_LINE('Price cannot be less than 0');
+    
+    WHEN e_transaction_not_found THEN
+      DBMS_OUTPUT.PUT_LINE('Invalid transaction ID');
+    
+    WHEN e_contact_owner THEN
+      DBMS_OUTPUT.PUT_LINE('Could not process the update. The product stock will go to negative. Please contact the store owner.');
+
+
+END;
+/
+
+
+CREATE OR REPLACE TRIGGER AFTER_PURCHASES_UPDATE
+AFTER UPDATE ON PURCHASES
+FOR EACH ROW
+WHEN (OLD.QUANTITY <> NEW.QUANTITY)
+BEGIN
+    IF :OLD.QUANTITY > :NEW.QUANTITY THEN
+        UPDATE PRODUCT SET REMAINING_UNITS = REMAINING_UNITS - (:OLD.QUANTITY - :NEW.QUANTITY) WHERE PRODUCT_ID = :NEW.PRODUCT_ID;
+    END IF;
+    
+    IF :OLD.QUANTITY < :NEW.QUANTITY THEN
+        UPDATE PRODUCT SET REMAINING_UNITS = REMAINING_UNITS + (:NEW.QUANTITY - :OLD.QUANTITY) WHERE PRODUCT_ID = :NEW.PRODUCT_ID;
+    END IF;
+
+END;
+/
+
