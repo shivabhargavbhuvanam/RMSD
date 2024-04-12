@@ -357,6 +357,7 @@ BEGIN
       RETURN FALSE;
   END IF;
 END VALIDATE_PHONE;
+/
 
 
 -- Procedures
