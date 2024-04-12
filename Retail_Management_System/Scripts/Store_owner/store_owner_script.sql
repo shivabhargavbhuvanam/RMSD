@@ -2362,3 +2362,54 @@ GRANT EXECUTE ON GET_MONTHLY_PURCHASES_REPORT TO accountant_role;
 GRANT EXECUTE ON GET_MONTHLY_PURCHASES_REPORT TO manager_role;
 GRANT EXECUTE ON GET_YEARLY_PURCHASES_REPORT TO accountant_role;
 GRANT EXECUTE ON GET_YEARLY_PURCHASES_REPORT TO manager_role;
+
+
+CREATE OR REPLACE VIEW EMPLOYEE_PERFORMANCE AS
+    SELECT 
+        EMPLOYEE.EMPLOYEE_ID, 
+        EMPLOYEE.FIRST_NAME || ' ' || EMPLOYEE.LAST_NAME AS EMPLOYEE_NAME, 
+        EMPLOYEE.EMAIL, 
+        EMPLOYEE.WAGE,
+        COUNT(DISTINCT ORDERS.ORDER_ID) AS TOTAL_ORDERS_TAKEN,
+        NVL(SUM(ITEM_ORDERS.UNITS * ITEM_ORDERS.SELLING_PRICE), 0) AS TOTAL_REVENUE_GENERATED
+    FROM 
+        EMPLOYEE 
+    LEFT OUTER JOIN 
+        ORDERS ON ORDERS.EMPLOYEE_ID = EMPLOYEE.EMPLOYEE_ID
+    LEFT OUTER JOIN 
+        ITEM_ORDERS ON ORDERS.ORDER_ID = ITEM_ORDERS.ORDER_ID
+    GROUP BY 
+        EMPLOYEE.EMPLOYEE_ID, 
+        EMPLOYEE.FIRST_NAME,
+        EMPLOYEE.LAST_NAME,
+        EMPLOYEE.EMAIL,
+        EMPLOYEE.WAGE
+    ORDER BY 
+        TOTAL_REVENUE_GENERATED DESC
+;
+
+GRANT SELECT ON EMPLOYEE_PERFORMANCE TO manager_role;
+
+
+CREATE OR REPLACE VIEW PRODUCT_PRICE_WISE_SALES AS 
+SELECT
+    p.product_id,
+    p.name AS product_name,
+    p.category,
+    ih.updated_price as during_price,
+    COALESCE(SUM(io.units), 0) AS units_sold
+FROM
+    product_history ih
+JOIN
+    product p ON p.product_id = ih.product_id
+LEFT OUTER JOIN
+    item_orders io ON ih.product_id = io.product_id AND io.selling_price = ih.updated_price
+GROUP BY
+    p.product_id,
+    p.name,
+    p.category,
+    ih.updated_price
+ORDER BY
+    p.product_id;
+
+GRANT SELECT ON PRODUCT_PRICE_WISE_SALES TO manager_role;
