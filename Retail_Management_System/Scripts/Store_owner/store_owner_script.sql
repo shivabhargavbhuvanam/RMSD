@@ -2136,333 +2136,6 @@ EXCEPTION
 END GET_YEARLY_BEST_SELLER_REPORT;
 /
 
-CREATE OR REPLACE FUNCTION GET_SALES_REPORT(
-    p_time_frame VARCHAR2,
-    p_start_date DATE,
-    p_end_date DATE
-) RETURN SYS_REFCURSOR
-IS
-    v_query VARCHAR2(1000);
-    v_sales_cursor SYS_REFCURSOR;
-    e_invalid_date_range EXCEPTION;
-    e_invalid_time_frame EXCEPTION;
-BEGIN
-    -- Check if start date is less than end date
-    IF p_start_date > p_end_date THEN
-        RAISE e_invalid_date_range;
-    END IF;
-
-    -- Build the query based on the time frame
-    IF p_time_frame = 'WEEK' THEN
-        v_query := 'SELECT TO_CHAR(o.ORDER_DATE, ''IW'') AS WEEK, SUM(io.SELLING_PRICE * io.UNITS) AS TOTAL_SALES
-                    FROM Orders o
-                    JOIN Item_Orders io ON o.ORDER_ID = io.ORDER_ID
-                    WHERE o.ORDER_DATE >= :p_start_date
-                      AND o.ORDER_DATE <= :p_end_date
-                    GROUP BY TO_CHAR(o.ORDER_DATE, ''IW'')
-                    ORDER BY WEEK';
-    ELSIF p_time_frame = 'MONTH' THEN
-        v_query := 'SELECT TO_CHAR(o.ORDER_DATE, ''YYYY-MM'') AS MONTH, SUM(io.SELLING_PRICE * io.UNITS) AS TOTAL_SALES
-                    FROM Orders o
-                    JOIN Item_Orders io ON o.ORDER_ID = io.ORDER_ID
-                    WHERE o.ORDER_DATE >= :p_start_date
-                      AND o.ORDER_DATE <= :p_end_date
-                    GROUP BY TO_CHAR(o.ORDER_DATE, ''YYYY-MM'')
-                    ORDER BY MONTH';
-    ELSIF p_time_frame = 'YEAR' THEN
-        v_query := 'SELECT TO_CHAR(o.ORDER_DATE, ''YYYY'') AS YEAR, SUM(io.SELLING_PRICE * io.UNITS) AS TOTAL_SALES
-                    FROM Orders o
-                    JOIN Item_Orders io ON o.ORDER_ID = io.ORDER_ID
-                    WHERE o.ORDER_DATE >= :p_start_date
-                      AND o.ORDER_DATE <= :p_end_date
-                    GROUP BY TO_CHAR(o.ORDER_DATE, ''YYYY'')
-                    ORDER BY YEAR';
-    ELSE
-        RAISE e_invalid_time_frame;
-    END IF;
-
-    -- Open the ref cursor and execute the query
-    OPEN v_sales_cursor FOR v_query USING p_start_date, p_end_date;
-    RETURN v_sales_cursor;
-
-EXCEPTION
-    WHEN e_invalid_date_range THEN
-        DBMS_OUTPUT.PUT_LINE('Start date cannot be greater than end date.');
-    WHEN e_invalid_time_frame THEN
-        DBMS_OUTPUT.PUT_LINE('Invalid time frame. Please specify ''WEEK'', ''MONTH'', or ''YEAR''.');
-    WHEN OTHERS THEN
-        RAISE;
-END GET_SALES_REPORT;
-/
-
--- Weekly Sales Report Procedure
-CREATE OR REPLACE PROCEDURE GET_WEEKLY_SALES_REPORT(p_start_date DATE, p_end_date DATE)
-IS
-    v_report_cursor SYS_REFCURSOR;
-    v_week VARCHAR2(10);
-    v_total_sales NUMBER;
-    e_invalid_date_range EXCEPTION;
-BEGIN
-    -- Check if start date is less than end date
-    IF p_start_date > p_end_date THEN
-        RAISE e_invalid_date_range;
-    END IF;
-
-    v_report_cursor := GET_SALES_REPORT('WEEK', p_start_date, p_end_date);
-
-    LOOP
-        FETCH v_report_cursor INTO v_week, v_total_sales;
-        EXIT WHEN v_report_cursor%NOTFOUND;
-        DBMS_OUTPUT.PUT_LINE('Week: ' || v_week || ' Total Sales: ' || v_total_sales);
-    END LOOP;
-
-    CLOSE v_report_cursor;
-
-EXCEPTION
-    WHEN e_invalid_date_range THEN
-        DBMS_OUTPUT.PUT_LINE('Start date cannot be greater than end date.');
-    WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('Error in GET_WEEKLY_SALES_REPORT: ' || SQLERRM);
-END GET_WEEKLY_SALES_REPORT;
-/
-
--- Monthly Sales Report Procedure
-CREATE OR REPLACE PROCEDURE GET_MONTHLY_SALES_REPORT(p_start_date DATE, p_end_date DATE)
-IS
-    v_report_cursor SYS_REFCURSOR;
-    v_month VARCHAR2(15);
-    v_total_sales NUMBER;
-    e_invalid_date_range EXCEPTION;
-BEGIN
-    -- Check if start date is less than end date
-    IF p_start_date > p_end_date THEN
-        RAISE e_invalid_date_range;
-    END IF;
-
-    v_report_cursor := GET_SALES_REPORT('MONTH', p_start_date, p_end_date);
-
-    LOOP
-        FETCH v_report_cursor INTO v_month, v_total_sales;
-        EXIT WHEN v_report_cursor%NOTFOUND;
-        DBMS_OUTPUT.PUT_LINE('Month: ' || v_month || ' Total Sales: ' || v_total_sales);
-    END LOOP;
-
-    CLOSE v_report_cursor;
-
-EXCEPTION
-    WHEN e_invalid_date_range THEN
-        DBMS_OUTPUT.PUT_LINE('Start date cannot be greater than end date.');
-    WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('Error in GET_MONTHLY_SALES_REPORT: ' || SQLERRM);
-END GET_MONTHLY_SALES_REPORT;
-/
-
--- Yearly Sales Report Procedure
-CREATE OR REPLACE PROCEDURE GET_YEARLY_SALES_REPORT(p_start_date DATE, p_end_date DATE)
-IS
-    v_report_cursor SYS_REFCURSOR;
-    v_year VARCHAR2(10);
-    v_total_sales NUMBER;
-    e_invalid_date_range EXCEPTION;
-BEGIN
-    -- Check if start date is less than end date
-    IF p_start_date > p_end_date THEN
-        RAISE e_invalid_date_range;
-    END IF;
-
-    v_report_cursor := GET_SALES_REPORT('YEAR', p_start_date, p_end_date);
-
-    LOOP
-        FETCH v_report_cursor INTO v_year, v_total_sales;
-        EXIT WHEN v_report_cursor%NOTFOUND;
-        DBMS_OUTPUT.PUT_LINE('Year: ' || v_year || ' Total Sales: ' || v_total_sales);
-    END LOOP;
-
-    CLOSE v_report_cursor;
-
-EXCEPTION
-    WHEN e_invalid_date_range THEN
-        DBMS_OUTPUT.PUT_LINE('Start date cannot be greater than end date.');
-    WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('Error in GET_YEARLY_SALES_REPORT: ' || SQLERRM);
-END GET_YEARLY_SALES_REPORT;
-/
-
--- Grant execute on the GET_SALES_REPORT function to the accountant_role and manager_role
-GRANT EXECUTE ON GET_SALES_REPORT TO accountant_role;
-GRANT EXECUTE ON GET_SALES_REPORT TO manager_role;
-
--- Grant execute on the GET_WEEKLY_SALES_REPORT procedure to the accountant_role and manager_role
-GRANT EXECUTE ON GET_WEEKLY_SALES_REPORT TO accountant_role;
-GRANT EXECUTE ON GET_WEEKLY_SALES_REPORT TO manager_role;
-
--- Grant execute on the GET_MONTHLY_SALES_REPORT procedure to the accountant_role and manager_role
-GRANT EXECUTE ON GET_MONTHLY_SALES_REPORT TO accountant_role;
-GRANT EXECUTE ON GET_MONTHLY_SALES_REPORT TO manager_role;
-
--- Grant execute on the GET_YEARLY_SALES_REPORT procedure to the accountant_role and manager_role
-GRANT EXECUTE ON GET_YEARLY_SALES_REPORT TO accountant_role;
-GRANT EXECUTE ON GET_YEARLY_SALES_REPORT TO manager_role;
-
-CREATE OR REPLACE FUNCTION GET_PURCHASES_REPORT(
-    p_time_frame VARCHAR2,
-    p_start_date DATE,
-    p_end_date DATE
-) RETURN SYS_REFCURSOR
-IS
-    v_query VARCHAR2(1000);
-    v_purchases_cursor SYS_REFCURSOR;
-    e_invalid_date_range EXCEPTION;
-    e_invalid_time_frame EXCEPTION;
-BEGIN
-    -- Check if start date is less than end date
-    IF p_start_date > p_end_date THEN
-        RAISE e_invalid_date_range;
-    END IF;
-
-    -- Build the query based on the time frame
-    IF p_time_frame = 'WEEK' THEN
-        v_query := 'SELECT TO_CHAR(p.PURCHASE_DATE, ''IW'') AS WEEK, SUM(p.QUANTITY * p.BUYING_PRICE) AS TOTAL_PURCHASES
-                    FROM Purchases p
-                    WHERE p.PURCHASE_DATE >= :p_start_date
-                      AND p.PURCHASE_DATE <= :p_end_date
-                    GROUP BY TO_CHAR(p.PURCHASE_DATE, ''IW'')
-                    ORDER BY WEEK';
-    ELSIF p_time_frame = 'MONTH' THEN
-        v_query := 'SELECT TO_CHAR(p.PURCHASE_DATE, ''YYYY-MM'') AS MONTH, SUM(p.QUANTITY * p.BUYING_PRICE) AS TOTAL_PURCHASES
-                    FROM Purchases p
-                    WHERE p.PURCHASE_DATE >= :p_start_date
-                      AND p.PURCHASE_DATE <= :p_end_date
-                    GROUP BY TO_CHAR(p.PURCHASE_DATE, ''YYYY-MM'')
-                    ORDER BY MONTH';
-    ELSIF p_time_frame = 'YEAR' THEN
-        v_query := 'SELECT TO_CHAR(p.PURCHASE_DATE, ''YYYY'') AS YEAR, SUM(p.QUANTITY * p.BUYING_PRICE) AS TOTAL_PURCHASES
-                    FROM Purchases p
-                    WHERE p.PURCHASE_DATE >= :p_start_date
-                      AND p.PURCHASE_DATE <= :p_end_date
-                    GROUP BY TO_CHAR(p.PURCHASE_DATE, ''YYYY'')
-                    ORDER BY YEAR';
-    ELSE
-        RAISE e_invalid_time_frame;
-    END IF;
-
-    -- Open the ref cursor and execute the query
-    OPEN v_purchases_cursor FOR v_query USING p_start_date, p_end_date;
-    RETURN v_purchases_cursor;
-
-EXCEPTION
-    WHEN e_invalid_date_range THEN
-        DBMS_OUTPUT.PUT_LINE('Start date cannot be greater than end date.');
-    WHEN e_invalid_time_frame THEN
-        DBMS_OUTPUT.PUT_LINE('Invalid time frame. Please specify ''WEEK'', ''MONTH'', or ''YEAR''.');
-    WHEN OTHERS THEN
-        RAISE;
-END GET_PURCHASES_REPORT;
-/
-
--- Weekly Purchases Report Procedure
-CREATE OR REPLACE PROCEDURE GET_WEEKLY_PURCHASES_REPORT(p_start_date DATE, p_end_date DATE)
-IS
-    v_report_cursor SYS_REFCURSOR;
-    v_week VARCHAR2(10);
-    v_total_purchases NUMBER;
-    e_invalid_date_range EXCEPTION;
-BEGIN
-    -- Check if start date is less than end date
-    IF p_start_date > p_end_date THEN
-        RAISE e_invalid_date_range;
-    END IF;
-
-    v_report_cursor := GET_PURCHASES_REPORT('WEEK', p_start_date, p_end_date);
-
-    LOOP
-        FETCH v_report_cursor INTO v_week, v_total_purchases;
-        EXIT WHEN v_report_cursor%NOTFOUND;
-        DBMS_OUTPUT.PUT_LINE('Week: ' || v_week || ' Total Purchases: ' || v_total_purchases);
-    END LOOP;
-
-    CLOSE v_report_cursor;
-
-EXCEPTION
-    WHEN e_invalid_date_range THEN
-        DBMS_OUTPUT.PUT_LINE('Start date cannot be greater than end date.');
-    WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('Error in GET_WEEKLY_PURCHASES_REPORT: ' || SQLERRM);
-END GET_WEEKLY_PURCHASES_REPORT;
-/
-
--- Monthly Purchases Report Procedure
-CREATE OR REPLACE PROCEDURE GET_MONTHLY_PURCHASES_REPORT(p_start_date DATE, p_end_date DATE)
-IS
-    v_report_cursor SYS_REFCURSOR;
-    v_month VARCHAR2(15);
-    v_total_purchases NUMBER;
-    e_invalid_date_range EXCEPTION;
-BEGIN
-    -- Check if start date is less than end date
-    IF p_start_date > p_end_date THEN
-        RAISE e_invalid_date_range;
-    END IF;
-
-    v_report_cursor := GET_PURCHASES_REPORT('MONTH', p_start_date, p_end_date);
-
-    LOOP
-        FETCH v_report_cursor INTO v_month, v_total_purchases;
-        EXIT WHEN v_report_cursor%NOTFOUND;
-        DBMS_OUTPUT.PUT_LINE('Month: ' || v_month || ' Total Purchases: ' || v_total_purchases);
-    END LOOP;
-
-    CLOSE v_report_cursor;
-
-EXCEPTION
-    WHEN e_invalid_date_range THEN
-        DBMS_OUTPUT.PUT_LINE('Start date cannot be greater than end date.');
-    WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('Error in GET_MONTHLY_PURCHASES_REPORT: ' || SQLERRM);
-END GET_MONTHLY_PURCHASES_REPORT;
-/
-
--- Yearly Purchases Report Procedure
-CREATE OR REPLACE PROCEDURE GET_YEARLY_PURCHASES_REPORT(p_start_date DATE, p_end_date DATE)
-IS
-    v_report_cursor SYS_REFCURSOR;
-    v_year VARCHAR2(10);
-    v_total_purchases NUMBER;
-    e_invalid_date_range EXCEPTION;
-BEGIN
-    -- Check if start date is less than end date
-    IF p_start_date > p_end_date THEN
-        RAISE e_invalid_date_range;
-    END IF;
-
-    v_report_cursor := GET_PURCHASES_REPORT('YEAR', p_start_date, p_end_date);
-
-    LOOP
-        FETCH v_report_cursor INTO v_year, v_total_purchases;
-        EXIT WHEN v_report_cursor%NOTFOUND;
-        DBMS_OUTPUT.PUT_LINE('Year: ' || v_year || ' Total Purchases: ' || v_total_purchases);
-    END LOOP;
-
-    CLOSE v_report_cursor;
-
-EXCEPTION
-    WHEN e_invalid_date_range THEN
-        DBMS_OUTPUT.PUT_LINE('Start date cannot be greater than end date.');
-    WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('Error in GET_YEARLY_PURCHASES_REPORT: ' || SQLERRM);
-END GET_YEARLY_PURCHASES_REPORT;
-/
-
-GRANT EXECUTE ON GET_PURCHASES_REPORT TO accountant_role;
-GRANT EXECUTE ON GET_PURCHASES_REPORT TO manager_role;
-GRANT EXECUTE ON GET_WEEKLY_PURCHASES_REPORT TO accountant_role;
-GRANT EXECUTE ON GET_WEEKLY_PURCHASES_REPORT TO manager_role;
-GRANT EXECUTE ON GET_MONTHLY_PURCHASES_REPORT TO accountant_role;
-GRANT EXECUTE ON GET_MONTHLY_PURCHASES_REPORT TO manager_role;
-GRANT EXECUTE ON GET_YEARLY_PURCHASES_REPORT TO accountant_role;
-GRANT EXECUTE ON GET_YEARLY_PURCHASES_REPORT TO manager_role;
-
-
 CREATE OR REPLACE VIEW EMPLOYEE_PERFORMANCE AS
     SELECT 
         EMPLOYEE.EMPLOYEE_ID, 
@@ -2532,3 +2205,220 @@ select c.customer_id,
     
 GRANT SELECT ON customers_orders_overview TO SALES_REP_ROLE;
 GRANT SELECT ON customers_orders_overview  TO MANAGER_ROLE;
+
+CREATE OR REPLACE PACKAGE REPORTS_PACKAGE AS
+    PROCEDURE GET_SALES_REP_QUARTERLY_SALES(p_year IN NUMBER);
+    PROCEDURE GET_QUARTERLY_MOST_SOLD_PRODUCTS(p_year IN NUMBER);
+    PROCEDURE GET_QUARTERLY_PURCHASES_REPORT(p_year IN NUMBER);
+    PROCEDURE GET_QUARTERLY_SALES_REPORT(p_year IN NUMBER);
+    PROCEDURE GET_TOP_CUSTOMERS_BY_QUARTER(p_year IN NUMBER);
+END REPORTS_PACKAGE;
+/
+
+CREATE OR REPLACE PACKAGE BODY REPORTS_PACKAGE AS
+
+    PROCEDURE GET_SALES_REP_QUARTERLY_SALES(p_year IN NUMBER)
+    IS
+        v_quarter NUMBER;
+        v_sales_rep_name VARCHAR2(255);
+        v_total_sales NUMBER;
+    BEGIN
+        DBMS_OUTPUT.PUT_LINE('Sales Rep Quarterly Sales for the Year ' || p_year);
+        DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+    
+        FOR v_quarter IN 1..4 LOOP
+            DBMS_OUTPUT.PUT_LINE('Quarter ' || v_quarter || ':');
+    
+            -- Now this query fetches data for all employees, not just 'Sales Rep'
+            FOR rec IN (
+                SELECT e.FIRST_NAME || ' ' || e.LAST_NAME AS sales_rep_name,
+                       SUM(io.UNITS * io.SELLING_PRICE) AS total_sales
+                FROM ORDERS o
+                JOIN EMPLOYEE e ON o.EMPLOYEE_ID = e.EMPLOYEE_ID
+                JOIN ITEM_ORDERS io ON o.ORDER_ID = io.ORDER_ID
+                WHERE EXTRACT(YEAR FROM o.ORDER_DATE) = p_year
+                    AND CEIL(EXTRACT(MONTH FROM o.ORDER_DATE) / 3) = v_quarter
+                GROUP BY e.FIRST_NAME, e.LAST_NAME
+                ORDER BY total_sales DESC
+            ) LOOP
+                DBMS_OUTPUT.PUT_LINE('Employee: ' || rec.sales_rep_name || ', Total Sales: $' || rec.total_sales);
+            END LOOP;
+    
+            DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+        END LOOP;
+    END GET_SALES_REP_QUARTERLY_SALES;
+
+    PROCEDURE GET_QUARTERLY_MOST_SOLD_PRODUCTS(p_year IN NUMBER)
+    IS
+        v_quarter NUMBER;
+        v_product_name VARCHAR2(255);
+        v_total_units_sold NUMBER;
+        v_rank NUMBER;
+    
+        CURSOR cur_products (c_year NUMBER, c_quarter NUMBER) IS
+            SELECT p.NAME, total_units_sold, ROWNUM AS rank
+            FROM (
+                SELECT p.NAME, SUM(io.UNITS) AS total_units_sold
+                FROM ORDERS o
+                JOIN ITEM_ORDERS io ON o.ORDER_ID = io.ORDER_ID
+                JOIN PRODUCT p ON io.PRODUCT_ID = p.PRODUCT_ID
+                WHERE EXTRACT(YEAR FROM o.ORDER_DATE) = c_year
+                AND CEIL(TO_NUMBER(TO_CHAR(o.ORDER_DATE, 'MM')) / 3) = c_quarter
+                GROUP BY p.NAME
+                ORDER BY SUM(io.UNITS) DESC
+            ) p
+            WHERE ROWNUM <= 3;
+            
+    BEGIN
+        DBMS_OUTPUT.PUT_LINE('Quarterly Top 3 Most Sold Products for the Year ' || p_year);
+        DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+    
+        FOR v_quarter IN 1..4 LOOP
+            DBMS_OUTPUT.PUT_LINE('Quarter ' || v_quarter || ':');
+    
+            OPEN cur_products(p_year, v_quarter);
+            LOOP
+                FETCH cur_products INTO v_product_name, v_total_units_sold, v_rank;
+                EXIT WHEN cur_products%NOTFOUND;
+                DBMS_OUTPUT.PUT_LINE('Rank ' || v_rank || ' - Product: ' || v_product_name || ', Units Sold: ' || v_total_units_sold);
+            END LOOP;
+            CLOSE cur_products;
+    
+            DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+        END LOOP;
+    END GET_QUARTERLY_MOST_SOLD_PRODUCTS;
+
+    PROCEDURE GET_QUARTERLY_PURCHASES_REPORT(p_year IN NUMBER)
+    IS
+        v_quarter VARCHAR2(20);
+        v_total_purchases NUMBER;
+        v_start_date DATE;
+        v_end_date DATE;
+        v_report_cursor SYS_REFCURSOR;
+    BEGIN
+        DBMS_OUTPUT.PUT_LINE('Quarterly Purchases Report for the Year ' || p_year);
+        DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+    
+        -- Open the cursor for the query
+        OPEN v_report_cursor FOR
+            SELECT 
+                CASE CEIL(TO_NUMBER(TO_CHAR(p.PURCHASE_DATE, 'MM')) / 3)
+                    WHEN 1 THEN 'Q1 (Jan - Mar)'
+                    WHEN 2 THEN 'Q2 (Apr - Jun)'
+                    WHEN 3 THEN 'Q3 (Jul - Sep)'
+                    WHEN 4 THEN 'Q4 (Oct - Dec)'
+                END AS quarter,
+                SUM(p.QUANTITY * p.BUYING_PRICE) AS total_purchases
+            FROM Purchases p
+            WHERE EXTRACT(YEAR FROM p.PURCHASE_DATE) = p_year
+            GROUP BY CEIL(TO_NUMBER(TO_CHAR(p.PURCHASE_DATE, 'MM')) / 3)
+            ORDER BY CEIL(TO_NUMBER(TO_CHAR(p.PURCHASE_DATE, 'MM')) / 3);
+    
+        -- Fetch and display the results
+        LOOP
+            FETCH v_report_cursor INTO v_quarter, v_total_purchases;
+            EXIT WHEN v_report_cursor%NOTFOUND;
+            
+            DBMS_OUTPUT.PUT_LINE(v_quarter || ': ' || v_total_purchases || ' USD');
+        END LOOP;
+    
+        -- Close the cursor
+        CLOSE v_report_cursor;
+        
+        DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+    
+    EXCEPTION
+        WHEN OTHERS THEN
+            DBMS_OUTPUT.PUT_LINE('Error in GET_QUARTERLY_PURCHASES_REPORT: ' || SQLERRM);
+    END GET_QUARTERLY_PURCHASES_REPORT;
+
+    PROCEDURE GET_QUARTERLY_SALES_REPORT(p_year IN NUMBER)
+        IS
+        v_quarter VARCHAR2(20);
+        v_total_sales NUMBER;
+        v_report_cursor SYS_REFCURSOR;
+    BEGIN
+        DBMS_OUTPUT.PUT_LINE('Quarterly Sales Report for the Year ' || p_year);
+        DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+    
+        -- Open the cursor for the query
+        OPEN v_report_cursor FOR
+            SELECT 
+                CASE CEIL(TO_NUMBER(TO_CHAR(o.ORDER_DATE, 'MM')) / 3)
+                    WHEN 1 THEN 'Q1 (Jan - Mar)'
+                    WHEN 2 THEN 'Q2 (Apr - Jun)'
+                    WHEN 3 THEN 'Q3 (Jul - Sep)'
+                    WHEN 4 THEN 'Q4 (Oct - Dec)'
+                END AS quarter,
+                SUM(io.SELLING_PRICE * io.UNITS) AS total_sales
+            FROM Orders o
+            JOIN Item_Orders io ON o.ORDER_ID = io.ORDER_ID
+            WHERE EXTRACT(YEAR FROM o.ORDER_DATE) = p_year
+            GROUP BY CEIL(TO_NUMBER(TO_CHAR(o.ORDER_DATE, 'MM')) / 3)
+            ORDER BY CEIL(TO_NUMBER(TO_CHAR(o.ORDER_DATE, 'MM')) / 3);
+    
+        -- Fetch and display the results
+        LOOP
+            FETCH v_report_cursor INTO v_quarter, v_total_sales;
+            EXIT WHEN v_report_cursor%NOTFOUND;
+            
+            DBMS_OUTPUT.PUT_LINE(v_quarter || ': ' || v_total_sales || ' USD');
+        END LOOP;
+    
+        -- Close the cursor
+        CLOSE v_report_cursor;
+        
+        DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+    
+    EXCEPTION
+        WHEN OTHERS THEN
+            DBMS_OUTPUT.PUT_LINE('Error in GET_QUARTERLY_SALES_REPORT: ' || SQLERRM);
+    END GET_QUARTERLY_SALES_REPORT;
+
+    PROCEDURE GET_TOP_CUSTOMERS_BY_QUARTER(p_year IN NUMBER)
+    IS
+        v_quarter VARCHAR2(20);
+        v_customer_name VARCHAR2(255);
+        v_total_sales NUMBER;
+        v_rank NUMBER;
+        
+        CURSOR cur_customers (c_year NUMBER, c_quarter NUMBER) IS
+            SELECT customer_name, total_sales, ROWNUM AS rank
+            FROM (
+                SELECT c.FIRST_NAME || ' ' || c.LAST_NAME AS customer_name,
+                       SUM(io.SELLING_PRICE * io.UNITS) AS total_sales
+                FROM ORDERS o
+                JOIN ITEM_ORDERS io ON o.ORDER_ID = io.ORDER_ID
+                JOIN CUSTOMER c ON o.CUSTOMER_ID = c.CUSTOMER_ID
+                WHERE EXTRACT(YEAR FROM o.ORDER_DATE) = c_year
+                AND CEIL(TO_NUMBER(TO_CHAR(o.ORDER_DATE, 'MM')) / 3) = c_quarter
+                GROUP BY c.FIRST_NAME, c.LAST_NAME
+                ORDER BY SUM(io.SELLING_PRICE * io.UNITS) DESC
+            )
+            WHERE ROWNUM <= 5;
+            
+    BEGIN
+        DBMS_OUTPUT.PUT_LINE('Top 5 Customers by Quarter for the Year ' || p_year);
+        DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+    
+        FOR v_quarter IN 1..4 LOOP
+            DBMS_OUTPUT.PUT_LINE('Quarter ' || v_quarter || ':');
+            
+            OPEN cur_customers(p_year, v_quarter);
+            LOOP
+                FETCH cur_customers INTO v_customer_name, v_total_sales, v_rank;
+                EXIT WHEN cur_customers%NOTFOUND;
+                DBMS_OUTPUT.PUT_LINE('Rank ' || v_rank || ' - Customer: ' || v_customer_name || ', Total Sales: ' || v_total_sales || ' USD');
+            END LOOP;
+            CLOSE cur_customers;
+            
+            DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+        END LOOP;
+    END GET_TOP_CUSTOMERS_BY_QUARTER;
+
+END REPORTS_PACKAGE;
+/
+
+GRANT EXECUTE ON REPORTS_PACKAGE TO manager_role;
+GRANT EXECUTE ON REPORTS_PACKAGE TO accountant_role;
+
