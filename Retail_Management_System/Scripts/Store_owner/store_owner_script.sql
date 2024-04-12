@@ -1310,13 +1310,25 @@ AS
      v_error_found BOOLEAN := FALSE;
      v_customer_id INTEGER;
      v_employee_id INTEGER;
+     v_record_count INTEGER;
      v_remaining_units INTEGER;
      v_product_id PRODUCT.PRODUCT_ID%TYPE;
      v_product_price PRODUCT.SELLING_PRICE%TYPE;
      v_order_id ORDERS.ORDER_ID%TYPE;
      v_product_ids product_id_list_type := product_id_list_type();
      v_product_prices product_price_list_type := product_price_list_type();
+     e_customer_not_found EXCEPTION;
+     e_employee_not_found EXCEPTION;
+     e_incorrect_data EXCEPTION;
+     e_no_product EXCEPTION;
+     e_no_units EXCEPTION;
 BEGIN
+
+    SELECT COUNT(*) INTO v_record_count FROM CUSTOMER WHERE EMAIL = pi_customer_email;
+    
+    IF v_record_count = 0 THEN
+        RAISE e_customer_not_found;
+    END IF;
     
         -- Validate customer email
     BEGIN
@@ -1329,6 +1341,12 @@ BEGIN
         DBMS_OUTPUT.PUT_LINE('Could not find customer for email: ' || pi_customer_email);
         RAISE_APPLICATION_ERROR(-20002, 'Customer not found for email: ' || pi_customer_email);
     END;
+    
+    SELECT COUNT(*) INTO v_record_count FROM EMPLOYEE WHERE EMAIL = pi_employee_email;
+    
+    IF v_record_count = 0 THEN
+        RAISE e_employee_not_found;
+    END IF;
 
     BEGIN
       SELECT employee_id
@@ -1351,7 +1369,7 @@ BEGIN
     
     IF v_error_found THEN
         DBMS_OUTPUT.PUT_LINE('Provide all the fields for the product details');
-        RAISE_APPLICATION_ERROR(-20001, 'Incomplete product data, please enter all the fields');
+        RAISE e_incorrect_data;
     END IF;
     
     FOR i IN 1..pi_products.COUNT LOOP
@@ -1382,7 +1400,7 @@ BEGIN
     END LOOP;
     
     IF v_error_found THEN
-        RAISE_APPLICATION_ERROR(-20001, 'Incomplete product data or product not found');
+        RAISE e_no_product;
     END IF;    
     
     FOR i IN 1..v_product_ids.COUNT LOOP
@@ -1397,7 +1415,7 @@ BEGIN
     END LOOP;
     
     IF v_error_found THEN
-        RAISE_APPLICATION_ERROR(-20001, 'Insufficient units');
+        RAISE e_no_units;
     END IF;
     
     INSERT INTO ORDERS (CUSTOMER_ID, EMPLOYEE_ID, ORDER_DATE) VALUES (v_customer_id, v_employee_id, SYSTIMESTAMP )
@@ -1410,6 +1428,21 @@ BEGIN
     END LOOP;
     
     DBMS_OUTPUT.PUT_LINE('Sucessfully recorded order');
+    
+    COMMIT;
+
+EXCEPTION
+
+    WHEN e_customer_not_found THEN
+        DBMS_OUTPUT.PUT_LINE('Could not find customer email');
+    WHEN e_employee_not_found THEN
+        DBMS_OUTPUT.PUT_LINE('Could not find employee email');
+    WHEN e_incorrect_data THEN
+        DBMS_OUTPUT.PUT_LINE('Provide all the fields [Name, Category, Units] for the product details');
+    WHEN e_no_product THEN
+        DBMS_OUTPUT.PUT_LINE('Could not get product with the specified details');
+    WHEN e_no_units THEN
+        DBMS_OUTPUT.PUT_LINE('Insufficient units in stock. Cannot place the order.');
     
 END process_products;
 /
