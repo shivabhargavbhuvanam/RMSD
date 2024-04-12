@@ -1,3 +1,6 @@
+SET SERVEROUTPUT ON SIZE UNLIMITED
+SET FEEDBACK ON
+
 -- Adding Customer 1
 BEGIN
     store_owner.ADD_CUSTOMER_RECORD(
@@ -48,3 +51,39 @@ BEGIN
     );
 END;
 /
+
+BEGIN
+
+STORE_OWNER.UPDATE_CUSTOMER_RECORD(
+    pi_current_email  => 'alice.johnson@example.com',
+    pi_new_email      => 'alice.j22@example.com'
+);
+
+END;
+/
+
+SELECT * FROM STORE_OWNER.STORE_CUSTOMERS;
+SELECT * FROM STORE_OWNER.STORE_PRODUCTS;
+
+
+DECLARE
+    v_products STORE_OWNER.product_list_type := STORE_OWNER.product_list_type(
+        STORE_OWNER.product_type('Nike', 'Shoes', 4),
+        STORE_OWNER.product_type('Retinoid', 'Cosmetics', 8),
+        STORE_OWNER.product_type('Lays', 'Chips', 15),
+        STORE_OWNER.product_type('Pan', 'Kitchen', 2)
+    );
+BEGIN
+    STORE_OWNER.process_products(pi_products=>v_products, pi_customer_email=>'alice.j22@example.com', pi_employee_email=>'thomas@email.com');
+END;
+/
+
+
+BEGIN
+    STORE_OWNER.UPDATE_ORDER_RECORD(pi_order_id => 4, pi_product_id=>7, pi_updated_units => 1);
+END;
+/
+
+--SELECT * FROM STORE_OWNER.STORE_ORDERS;
+--SELECT * FROM STORE_OWNER.STORE_PRODUCTS;
+--SELECT * FROM STORE_OWNER.STORE_CUSTOMERS;
