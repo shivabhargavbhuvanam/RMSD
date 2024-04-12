@@ -1,3 +1,6 @@
+SET SERVEROUTPUT ON SIZE UNLIMITED
+SET FEEDBACK ON
+
 BEGIN
     STORE_OWNER.ADD_PRODUCT(
         p_category => 'Clothing',
@@ -19,15 +22,6 @@ END;
 BEGIN
     STORE_OWNER.ADD_PRODUCT(
         p_category => 'Furniture',
-        p_name => 'Recliner',
-        p_remaining_units => 10,
-        p_selling_price => 97.50
-    );
-END;
-/
-BEGIN
-    STORE_OWNER.ADD_PRODUCT(
-        p_category => 'Furniture',
         p_name => 'Bed frame',
         p_remaining_units => 50,
         p_selling_price => 50.99
@@ -43,3 +37,27 @@ BEGIN
     );
 END;
 /
+
+
+BEGIN
+    STORE_OWNER.UPDATE_PRODUCT_NAME_CATEGORY(
+            p_product_id => 9,
+            p_category => 'Chips'
+    );
+END;
+/
+
+
+BEGIN
+    STORE_OWNER.PROCESS_PURCHASE(
+    pi_vendor_id      => 4,
+    pi_product_id     => 9,
+    pi_units          =>250,
+    pi_buying_price   => 3.45
+);
+END;
+/
+
+-- SELECT * FROM STORE_OWNER.STORE_PRODUCTS;
+-- SELECT * FROM STORE_OWNER.STORE_PURCHASES;
+-- SELECT * FROM STORE_OWNER.LOW_STOCK;
