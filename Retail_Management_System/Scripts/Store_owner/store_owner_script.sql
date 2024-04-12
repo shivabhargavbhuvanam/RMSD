@@ -145,6 +145,25 @@ BEGIN
     VALUES (:NEW.product_id, :OLD.selling_price, :NEW.selling_price, SYSTIMESTAMP);
 END;
 /
+
+CREATE OR REPLACE TRIGGER UPDATE_PRODUCT_QUANTITY_AFTER_PURCHASE
+AFTER INSERT ON PURCHASES
+FOR EACH ROW
+DECLARE
+  v_product_id PRODUCT.PRODUCT_ID%TYPE;
+  v_remaining_units NUMBER;
+  v_ordered_units NUMBER;
+BEGIN
+  v_product_id := :NEW.PRODUCT_ID;
+  v_ordered_units := :NEW.QUANTITY;
+  UPDATE PRODUCT
+  SET REMAINING_UNITS = REMAINING_UNITS + v_ordered_units
+  WHERE PRODUCT_ID = v_product_id;
+  IF SQL%NOTFOUND THEN
+    RAISE_APPLICATION_ERROR(-20001, 'Product not found for order (ID: ' || v_product_id || ')');
+  END IF;
+END;
+/
   
 CREATE OR REPLACE TRIGGER AFTER_PURCHASES_UPDATE
 AFTER UPDATE ON PURCHASES
