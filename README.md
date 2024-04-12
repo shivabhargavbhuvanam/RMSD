@@ -6,7 +6,7 @@ The proposed Retail Management System Database (RMSD) addresses the complex need
 
 #### ER diagram
 
-![Screenshot 2024-03-21 at 9 30 40 PM](https://github.com/shivabhargavbhuvanam/RMSD/assets/144749543/2d5790a8-8314-4187-9974-df42fb56568f)
+<img width="1438" alt="Screenshot 2024-04-12 at 12 24 45 PM" src="https://github.com/shivabhargavbhuvanam/RMSD/assets/145069226/f81d6ebe-2af4-4acd-9829-f34bc20096ce">
 
 #### Usage
 
