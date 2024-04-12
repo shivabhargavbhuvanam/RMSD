@@ -315,18 +315,21 @@ END VALIDATE_EMAIL;
 /
 
 CREATE OR REPLACE FUNCTION EMAIL_EXISTS (
-    p_email IN VARCHAR2,
+    p_email            IN EMPLOYEE.email%TYPE,
     p_table_name IN VARCHAR2
 ) RETURN NUMBER IS
     v_count NUMBER;
+    v_email VARCHAR2(45);
     e_table_not_found EXCEPTION;
     PRAGMA EXCEPTION_INIT(e_table_not_found, -00942); -- ORA-00942: table or view does not exist
     e_other_errors EXCEPTION;
 BEGIN
+    
+    v_email := LOWER(p_email);
     EXECUTE IMMEDIATE 
-        'SELECT COUNT(*) FROM ' || p_table_name || ' WHERE EMAIL = :1'
+        'SELECT COUNT(*) FROM ' || p_table_name || ' WHERE lower(EMAIL) = :1'
         INTO v_count
-        USING p_email;
+        USING v_email;
 
     RETURN v_count;
 EXCEPTION
