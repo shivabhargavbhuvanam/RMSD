@@ -1351,7 +1351,7 @@ AS
      e_no_units EXCEPTION;
 BEGIN
 
-    SELECT COUNT(*) INTO v_record_count FROM CUSTOMER WHERE EMAIL = pi_customer_email;
+    SELECT COUNT(*) INTO v_record_count FROM CUSTOMER WHERE LOWER(EMAIL) = LOWER(pi_customer_email);
     
     IF v_record_count = 0 THEN
         RAISE e_customer_not_found;
@@ -1362,14 +1362,14 @@ BEGIN
       SELECT customer_id
       INTO v_customer_id
       FROM CUSTOMER
-      WHERE EMAIL = pi_customer_email;
+      WHERE LOWER(EMAIL) = LOWER(pi_customer_email);
     EXCEPTION
       WHEN NO_DATA_FOUND THEN
         DBMS_OUTPUT.PUT_LINE('Could not find customer for email: ' || pi_customer_email);
         RAISE_APPLICATION_ERROR(-20002, 'Customer not found for email: ' || pi_customer_email);
     END;
     
-    SELECT COUNT(*) INTO v_record_count FROM EMPLOYEE WHERE EMAIL = pi_employee_email;
+    SELECT COUNT(*) INTO v_record_count FROM EMPLOYEE WHERE LOWER(EMAIL) = LOWER(pi_employee_email);
     
     IF v_record_count = 0 THEN
         RAISE e_employee_not_found;
@@ -1379,7 +1379,7 @@ BEGIN
       SELECT employee_id
       INTO v_employee_id
       FROM EMPLOYEE
-      WHERE EMAIL = pi_employee_email;
+      WHERE LOWER(EMAIL) = LOWER(pi_employee_email);
     EXCEPTION
       WHEN NO_DATA_FOUND THEN
         DBMS_OUTPUT.PUT_LINE('Could not find employee for email: ' || pi_employee_email);
@@ -1403,8 +1403,8 @@ BEGIN
         BEGIN
             SELECT PRODUCT_ID, SELLING_PRICE INTO v_product_id, v_product_price
             FROM PRODUCT
-            WHERE NAME = pi_products(i).name
-            AND CATEGORY = pi_products(i).category;
+            WHERE LOWER(NAME) = LOWER(pi_products(i).name)
+            AND LOWER(CATEGORY) = LOWER(pi_products(i).category);
             
         IF v_product_id IS NOT NULL THEN
             DBMS_OUTPUT.PUT_LINE('Product ID: ' || v_product_id);
