@@ -383,6 +383,7 @@ create or replace PROCEDURE ADD_EMPLOYEE_RECORD(
 )
 AS
     v_address_id ADDRESS.address_id%TYPE;
+    p_table_name VARCHAR2(45);
     v_email_count NUMBER;
     invalid_input EXCEPTION;
     email_invalid EXCEPTION;
@@ -407,7 +408,7 @@ BEGIN
     SELECT COUNT(*)
     INTO v_email_count
     FROM EMPLOYEE
-    WHERE EMAIL = pi_email;
+    WHERE LOWER(EMAIL) = LOWER(pi_email);
 
     IF v_email_count > 0 THEN
         RAISE email_exists;
@@ -422,7 +423,7 @@ BEGIN
 
     -- Insert into Employee table
     INSERT INTO EMPLOYEE (FIRST_NAME, LAST_NAME, EMAIL, PHONE_NUMBER, HIRING_DATE, ROLE, WAGE, ADDRESS_ID)
-    VALUES (pi_first_name, pi_last_name, pi_email, pi_phone, pi_hiring_date, pi_role, pi_wage, v_address_id);
+    VALUES (pi_first_name, pi_last_name, LOWER(pi_email), pi_phone, pi_hiring_date, pi_role, pi_wage, v_address_id);
 
     COMMIT;
 
