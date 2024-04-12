@@ -148,32 +148,32 @@ END;
 
 -- View for Customer Order History
 CREATE OR REPLACE VIEW Customer_Order_History AS
-SELECT c.CUSTOMER_ID, c.FIRST_NAME, c.LAST_NAME, o.ORDER_ID, o.ORDER_DATE
+SELECT c.CUSTOMER_ID, INITCAP(c.FIRST_NAME) AS First_Name, INITCAP(c.LAST_NAME) as LAST_NAME, o.ORDER_ID, o.ORDER_DATE
 FROM Customer c
 JOIN Orders o ON c.CUSTOMER_ID = o.CUSTOMER_ID;
 
 
 -- View for Vendor Order History
 CREATE OR REPLACE VIEW Vendor_Order_History AS
-SELECT v.VENDOR_ID, v.NAME, p.TRANSACTION_ID, p.PURCHASE_DATE, p.QUANTITY
+SELECT v.VENDOR_ID, INITCAP(v.NAME) as VENDOR_NAME, p.TRANSACTION_ID, p.PURCHASE_DATE, p.QUANTITY
 FROM Vendor v
 JOIN Purchases p ON v.VENDOR_ID = p.VENDOR_ID;
 
 -- View for Current Inventory
 CREATE OR REPLACE VIEW Current_Inventory AS
-SELECT p.PRODUCT_ID, p.NAME, p.REMAINING_UNITS
+SELECT p.PRODUCT_ID, INITCAP(p.NAME) as PRODUCT_NAME, p.REMAINING_UNITS
 FROM Product p;
 
 -- View for Low Stock
 -- Assuming 'low stock' is defined as fewer than 10 units
 CREATE OR REPLACE VIEW Low_Stock AS
-SELECT p.PRODUCT_ID, p.NAME, p.REMAINING_UNITS
+SELECT p.PRODUCT_ID, INITCAP(p.NAME) as PRODUCT_NAME, p.REMAINING_UNITS
 FROM Product p
 WHERE p.REMAINING_UNITS < 10;
 
 -- View for Product Sales
 CREATE OR REPLACE VIEW Product_Sales AS
-SELECT p.PRODUCT_ID, p.NAME, SUM(io.UNITS) AS TOTAL_UNITS_SOLD
+SELECT p.PRODUCT_ID, INITCAP(p.NAME) as PRODUCT_NAME, SUM(io.UNITS) AS TOTAL_UNITS_SOLD
 FROM Product p
 JOIN Item_Orders io ON p.PRODUCT_ID = io.PRODUCT_ID
 GROUP BY p.PRODUCT_ID, p.NAME;
@@ -195,7 +195,7 @@ GROUP BY TO_CHAR(p.PURCHASE_DATE, 'IW');
 
 -- View for Employee Performance
 CREATE OR REPLACE VIEW Employee_Performance AS
-SELECT e.EMPLOYEE_ID, e.FIRST_NAME, e.LAST_NAME, COUNT(o.ORDER_ID) AS TOTAL_ORDERS
+SELECT e.EMPLOYEE_ID, INITCAP(e.FIRST_NAME) as FIRST_NAME, INITCAP(e.LAST_NAME) as LAST_NAME, COUNT(o.ORDER_ID) AS TOTAL_ORDERS
 FROM Employee e
 JOIN Orders o ON e.EMPLOYEE_ID = o.EMPLOYEE_ID
 GROUP BY e.EMPLOYEE_ID, e.FIRST_NAME, e.LAST_NAME;
@@ -1594,13 +1594,34 @@ GRANT SELECT ON STORE_PRODUCTS TO accountant_role;
 GRANT SELECT ON STORE_PRODUCTS TO inventory_clerk_role;
 
 CREATE OR REPLACE VIEW STORE_EMPLOYEES AS (
-    SELECT EMPLOYEE_ID, FIRST_NAME, LAST_NAME, EMAIL, WAGE, TO_CHAR(TRUNC(HIRING_DATE), 'DDth MON YYYY') AS HIRING_DATE, STREET, CITY, STATE, COUNTRY, POSTAL_CODE FROM EMPLOYEE INNER JOIN ADDRESS ON EMPLOYEE.ADDRESS_ID = ADDRESS.ADDRESS_ID
+    SELECT 
+        EMPLOYEE_ID, 
+        INITCAP(FIRST_NAME) as FIRST_NAME, 
+        INITCAP(LAST_NAME) as LAST_NAME, 
+        LOWER(EMAIL) as CUSTOMER_EMAIL, 
+        WAGE, 
+        TO_CHAR(TRUNC(HIRING_DATE), 'DDth MON YYYY') AS HIRING_DATE, 
+        INITCAP(STREET) as STREET, 
+        INITCAP(CITY) as CITY, 
+        INITCAP(STATE) as STATE, 
+        INITCAP(COUNTRY) as COUNTRY, 
+        POSTAL_CODE 
+    FROM EMPLOYEE INNER JOIN ADDRESS ON EMPLOYEE.ADDRESS_ID = ADDRESS.ADDRESS_ID
 );
 
 GRANT SELECT ON STORE_EMPLOYEES TO manager_role;
 
 CREATE OR REPLACE VIEW STORE_CUSTOMERS AS (
-  select CUSTOMER_ID, FIRST_NAME, LAST_NAME, EMAIL, STREET, CITY, STATE, COUNTRY, POSTAL_CODE FROM CUSTOMER INNER JOIN ADDRESS ON CUSTOMER.ADDRESS_ID = ADDRESS.ADDRESS_ID
+  select CUSTOMER_ID, 
+    INITCAP(FIRST_NAME) as FIRST_NAME, 
+    INITCAP(LAST_NAME) as LAST_NAME, 
+    LOWER(EMAIL) as CUSTOMER_EMAIL, 
+    INITCAP(STREET) as STREET, 
+    INITCAP(CITY) as CITY, 
+    INITCAP(STATE) as STATE, 
+    INITCAP(COUNTRY) as COUNTRY, 
+    POSTAL_CODE 
+    FROM CUSTOMER INNER JOIN ADDRESS ON CUSTOMER.ADDRESS_ID = ADDRESS.ADDRESS_ID
 );
 
 GRANT SELECT ON STORE_CUSTOMERS TO manager_role;
@@ -1608,21 +1629,50 @@ GRANT SELECT ON STORE_CUSTOMERS TO sales_rep_role;
 
 
 CREATE OR REPLACE VIEW STORE_VENDORS AS (
- SELECT VENDOR_ID, NAME, EMAIL, STREET, CITY, STATE, COUNTRY, POSTAL_CODE FROM ADDRESS INNER JOIN VENDOR ON VENDOR.ADDRESS_ID = ADDRESS.ADDRESS_ID
+ SELECT VENDOR_ID, 
+    INITCAP(NAME) as VENDOR_NAME, 
+    LOWER(EMAIL) as VENDOR_EMAIL, 
+    INITCAP(STREET) as STREET, 
+    INITCAP(CITY) as CITY, 
+    INITCAP(STATE) as STATE, 
+    INITCAP(COUNTRY) as COUNTRY, 
+    POSTAL_CODE 
+    FROM ADDRESS INNER JOIN VENDOR ON VENDOR.ADDRESS_ID = ADDRESS.ADDRESS_ID
 );
 
 GRANT SELECT ON STORE_VENDORS TO manager_role;
 GRANT SELECT ON STORE_VENDORS TO inventory_clerk_role;
 
 CREATE OR REPLACE VIEW STORE_PURCHASES AS (
-  SELECT TRANSACTION_ID, TO_CHAR(TRUNC(PURCHASE_DATE), 'DDth MON YYYY') AS PURCHASE_DATE, VENDOR.VENDOR_ID, VENDOR.NAME AS VENDOR_NAME, QUANTITY, PURCHASES.PRODUCT_ID, PRODUCT.NAME AS PRODUCT_NAME, PRODUCT.CATEGORY AS PRODUCT_CATEGORY, REMAINING_UNITS FROM PURCHASES INNER JOIN VENDOR ON PURCHASES.VENDOR_ID = VENDOR.VENDOR_ID INNER JOIN PRODUCT ON PURCHASES.PRODUCT_ID = PRODUCT.PRODUCT_ID
+  SELECT TRANSACTION_ID, 
+    TO_CHAR(TRUNC(PURCHASE_DATE), 'DDth MON YYYY') AS PURCHASE_DATE, 
+    VENDOR.VENDOR_ID, 
+    INITCAP(VENDOR.NAME) AS VENDOR_NAME, 
+    QUANTITY, 
+    PURCHASES.PRODUCT_ID, 
+    INITCAP(PRODUCT.NAME) AS PRODUCT_NAME, 
+    INITCAP(PRODUCT.CATEGORY) AS PRODUCT_CATEGORY, 
+    REMAINING_UNITS 
+    FROM PURCHASES INNER JOIN VENDOR ON PURCHASES.VENDOR_ID = VENDOR.VENDOR_ID INNER JOIN PRODUCT ON PURCHASES.PRODUCT_ID = PRODUCT.PRODUCT_ID
 );
 
 GRANT SELECT ON STORE_PURCHASES TO accountant_role;
 GRANT SELECT ON STORE_PURCHASES TO inventory_clerk_role;
 
 CREATE OR REPLACE VIEW STORE_ORDERS AS (
-   SELECT ORDERS.ORDER_ID, ORDERS.EMPLOYEE_ID, FIRST_NAME || ' ' || LAST_NAME AS CUSTOMER_NAME, EMAIL, TO_CHAR(TRUNC(order_date), 'DDth MON YYYY') AS order_date, PRODUCT.PRODUCT_ID, PRODUCT.NAME, PRODUCT.CATEGORY, UNITS, UNITS * ITEM_ORDERS.SELLING_PRICE AS TOTAL_COST FROM orders inner join item_orders on orders.order_id = item_orders.order_id inner join customer on customer.customer_id = orders.customer_id INNER JOIN PRODUCT ON PRODUCT.PRODUCT_ID = ITEM_ORDERS.PRODUCT_ID
+   SELECT ORDERS.ORDER_ID, 
+        ORDERS.EMPLOYEE_ID, 
+        INITCAP(FIRST_NAME) || ' ' || INITCAP(LAST_NAME) AS CUSTOMER_NAME, 
+        LOWER(EMAIL) as CUSTOMER_EMAIL, 
+        TO_CHAR(TRUNC(order_date), 'DDth MON YYYY') AS order_date, 
+        PRODUCT.PRODUCT_ID, 
+        INITCAP(PRODUCT.NAME) AS PRODUCT_NAME, 
+        INITCAP(PRODUCT.CATEGORY) AS PRODUCT_CATEGORY, 
+        UNITS, 
+        UNITS * ITEM_ORDERS.SELLING_PRICE AS TOTAL_COST 
+        FROM orders inner join item_orders on orders.order_id = item_orders.order_id 
+            inner join customer on customer.customer_id = orders.customer_id 
+            INNER JOIN PRODUCT ON PRODUCT.PRODUCT_ID = ITEM_ORDERS.PRODUCT_ID
 );
 
 GRANT SELECT ON STORE_ORDERS TO ACCOUNTANT;
@@ -1636,8 +1686,8 @@ WITH TEMP AS (
     GROUP BY PRODUCT_ID
 )
 SELECT TEMP.PRODUCT_ID, 
-       PRODUCT.CATEGORY, 
-       PRODUCT.NAME, 
+       INITCAP(PRODUCT.CATEGORY) AS PRODUCT_CATEGORY, 
+       INITCAP(PRODUCT.NAME) AS PRODUCT_NAME, 
        TEMP.AVG_BUYING_PRICE, 
        PRODUCT.SELLING_PRICE, 
        ROUND(100 * (PRODUCT.SELLING_PRICE - TEMP.AVG_BUYING_PRICE) / TEMP.AVG_BUYING_PRICE, 3) || '%' AS PROFIT_PER_SALE 
@@ -1854,8 +1904,8 @@ END;
 CREATE OR REPLACE VIEW PRODUCT_OVERVIEW AS 
 SELECT 
     p.PRODUCT_ID, 
-    p.NAME AS PRODUCT_NAME, 
-    p.CATEGORY,
+    INITCAP(p.NAME) AS PRODUCT_NAME, 
+    INITCAP(p.CATEGORY) AS PRODUCT_CATEGORY,
     SUM(i.UNITS) AS TOTAL_UNITS_SOLD, 
     SUM(i.UNITS * i.SELLING_PRICE) AS TOTAL_REVENUE,
     SUM(i.UNITS * (
@@ -1884,7 +1934,15 @@ GRANT SELECT ON PRODUCT_OVERVIEW TO accountant_role;
 GRANT SELECT ON PRODUCT_OVERVIEW TO manager_role;
 
 CREATE OR REPLACE VIEW customers_orders_overview AS
-select c.customer_id, (c.first_name || ' ' || c.last_name) as Customer, o.order_date, o.order_id as order_id, p.product_id, p.name as Product_Name, p.category as Category, '$' || p.selling_price as Product_Price, i.units as Quantity, '$' || (i.selling_price*i.units) as Total from STORE_OWNER.orders o
+select c.customer_id, 
+    (INITCAP(c.first_name) || ' ' || INITCAP(c.last_name)) as Customer, 
+    o.order_date, 
+    o.order_id as order_id, 
+    p.product_id, 
+    INITCAP(p.name) as Product_Name, 
+    INITCAP(p.category) as Category, 
+    '$' || p.selling_price as Product_Price, 
+    i.units as Quantity, '$' || (i.selling_price*i.units) as Total from STORE_OWNER.orders o
     inner join STORE_OWNER.customer c on o.customer_id = c.customer_id
     inner join STORE_OWNER.item_orders i on o.order_id = i.order_id
     inner join STORE_OWNER.product p on i.product_id = p.product_id
@@ -2400,8 +2458,8 @@ GRANT EXECUTE ON GET_YEARLY_PURCHASES_REPORT TO manager_role;
 CREATE OR REPLACE VIEW EMPLOYEE_PERFORMANCE AS
     SELECT 
         EMPLOYEE.EMPLOYEE_ID, 
-        EMPLOYEE.FIRST_NAME || ' ' || EMPLOYEE.LAST_NAME AS EMPLOYEE_NAME, 
-        EMPLOYEE.EMAIL, 
+        INITCAP(EMPLOYEE.FIRST_NAME) || ' ' || INITCAP(EMPLOYEE.LAST_NAME) AS EMPLOYEE_NAME, 
+        LOWER(EMPLOYEE.EMAIL) as EMPLOYEE_EMAIL, 
         EMPLOYEE.WAGE,
         COUNT(DISTINCT ORDERS.ORDER_ID) AS TOTAL_ORDERS_TAKEN,
         NVL(SUM(ITEM_ORDERS.UNITS * ITEM_ORDERS.SELLING_PRICE), 0) AS TOTAL_REVENUE_GENERATED
@@ -2427,8 +2485,8 @@ GRANT SELECT ON EMPLOYEE_PERFORMANCE TO manager_role;
 CREATE OR REPLACE VIEW PRODUCT_PRICE_WISE_SALES AS 
 SELECT
     p.product_id,
-    p.name AS product_name,
-    p.category,
+    INITCAP(p.name) AS product_name,
+    INITCAP(p.category) AS PRODUCT_CATEGORY,
     ih.updated_price as during_price,
     COALESCE(SUM(io.units), 0) AS units_sold
 FROM
@@ -2448,10 +2506,20 @@ ORDER BY
 GRANT SELECT ON PRODUCT_PRICE_WISE_SALES TO manager_role;
 
 CREATE OR REPLACE VIEW customers_orders_overview AS
-select c.customer_id, (c.first_name || ' ' || c.last_name) as Customer, o.order_date, o.order_id as order_id, p.product_id, p.name as Product_Name, p.category as Category, '$' || p.selling_price as Product_Price, i.units as Quantity, '$' || (i.selling_price*i.units) as Total from STORE_OWNER.orders o
-    inner join STORE_OWNER.customer c on o.customer_id = c.customer_id
-    inner join STORE_OWNER.item_orders i on o.order_id = i.order_id
-    inner join STORE_OWNER.product p on i.product_id = p.product_id
+select c.customer_id, 
+    (INITCAP(c.first_name) || ' ' || INITCAP(c.last_name)) as Customer, 
+    o.order_date, 
+    o.order_id as order_id, 
+    p.product_id, 
+    INITCAP(p.name) as Product_Name, 
+    INITCAP(p.category) as Category, 
+    '$' || p.selling_price as Product_Price, 
+    i.units as Quantity, 
+    '$' || (i.selling_price*i.units) as Total 
+        from STORE_OWNER.orders o
+        inner join STORE_OWNER.customer c on o.customer_id = c.customer_id
+        inner join STORE_OWNER.item_orders i on o.order_id = i.order_id
+        inner join STORE_OWNER.product p on i.product_id = p.product_id
     order by o.order_id; 
     
 GRANT SELECT ON customers_orders_overview TO SALES_REP_ROLE;
