@@ -62,9 +62,6 @@ STORE_OWNER.UPDATE_CUSTOMER_RECORD(
 END;
 /
 
-SELECT * FROM STORE_OWNER.STORE_CUSTOMERS;
-SELECT * FROM STORE_OWNER.STORE_PRODUCTS;
-
 
 DECLARE
     v_products STORE_OWNER.product_list_type := STORE_OWNER.product_list_type(
@@ -75,6 +72,30 @@ DECLARE
     );
 BEGIN
     STORE_OWNER.process_products(pi_products=>v_products, pi_customer_email=>'alice.j22@example.com', pi_employee_email=>'thomas@email.com');
+END;
+/
+
+DECLARE
+    v_products STORE_OWNER.product_list_type := STORE_OWNER.product_list_type(
+        STORE_OWNER.product_type('Nike', 'Shoes', 4),
+        STORE_OWNER.product_type('Lays', 'Chips', 5),
+        STORE_OWNER.product_type('Pan', 'Kitchen', 4)
+    );
+BEGIN
+    STORE_OWNER.process_products(pi_products=>v_products, pi_customer_email=>'alice.j22@example.com', pi_employee_email=>'bobby@email.com');
+END;
+/
+
+DECLARE
+    v_products STORE_OWNER.product_list_type := STORE_OWNER.product_list_type(
+        STORE_OWNER.product_type('Smartphone', 'Electronics', 2),
+        STORE_OWNER.product_type('Jeans', 'Clothing', 5),
+        STORE_OWNER.product_type('Retinoid', 'Cosmetics', 3),
+        STORE_OWNER.product_type('Bed frame', 'Furniture', 3),
+        STORE_OWNER.product_type('Milk', 'Groceries', 4)
+    );
+BEGIN
+    STORE_OWNER.process_products(pi_products=>v_products, pi_customer_email=>'alice.j22@example.com', pi_employee_email=>'bobby@email.com');
 END;
 /
 
