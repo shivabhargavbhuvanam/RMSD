@@ -54,6 +54,36 @@ BEGIN
 END;
 /
 
+BEGIN
+    STORE_OWNER.PROCESS_PURCHASE(
+    pi_vendor_id      => 4,
+    pi_product_id     => 8,
+    pi_units          => 20,
+    pi_buying_price   => 40.45
+);
+END;
+/
+
+BEGIN
+    STORE_OWNER.PROCESS_PURCHASE(
+    pi_vendor_id      => 4,
+    pi_product_id     => 7,
+    pi_units          => 30,
+    pi_buying_price   => 6.95
+);
+END;
+/
+
+BEGIN
+    STORE_OWNER.PROCESS_PURCHASE(
+    pi_vendor_id      => 4,
+    pi_product_id     => 6,
+    pi_units          => 60,
+    pi_buying_price   => 22.39
+);
+END;
+/
+
 -- SELECT * FROM STORE_OWNER.STORE_PRODUCTS;
 -- SELECT * FROM STORE_OWNER.STORE_PURCHASES;
 -- SELECT * FROM STORE_OWNER.LOW_STOCK;
