@@ -2422,3 +2422,26 @@ END REPORTS_PACKAGE;
 GRANT EXECUTE ON REPORTS_PACKAGE TO manager_role;
 GRANT EXECUTE ON REPORTS_PACKAGE TO accountant_role;
 
+
+CREATE OR REPLACE FUNCTION VALIDATE_PHONE(p_phone IN VARCHAR2) RETURN BOOLEAN IS
+    v_digit_count NUMBER;
+BEGIN
+    -- Remove non-digit characters and count the remaining digits
+    SELECT
+        REGEXP_COUNT(REGEXP_REPLACE(p_phone, '[^[:digit:]]'), '\d')
+    INTO
+        v_digit_count
+    FROM
+        DUAL;
+
+    -- Check if the digit count is equal to 10
+    IF v_digit_count = 10 THEN
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
+END VALIDATE_PHONE;
+/
+
+
+
