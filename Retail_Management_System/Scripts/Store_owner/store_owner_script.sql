@@ -2446,3 +2446,13 @@ ORDER BY
     p.product_id;
 
 GRANT SELECT ON PRODUCT_PRICE_WISE_SALES TO manager_role;
+
+CREATE OR REPLACE VIEW customers_orders_overview AS
+select c.customer_id, (c.first_name || ' ' || c.last_name) as Customer, o.order_date, o.order_id as order_id, p.product_id, p.name as Product_Name, p.category as Category, '$' || p.selling_price as Product_Price, i.units as Quantity, '$' || (i.selling_price*i.units) as Total from STORE_OWNER.orders o
+    inner join STORE_OWNER.customer c on o.customer_id = c.customer_id
+    inner join STORE_OWNER.item_orders i on o.order_id = i.order_id
+    inner join STORE_OWNER.product p on i.product_id = p.product_id
+    order by o.order_id; 
+    
+GRANT SELECT ON customers_orders_overview TO SALES_REP_ROLE;
+GRANT SELECT ON customers_orders_overview  TO MANAGER_ROLE;
