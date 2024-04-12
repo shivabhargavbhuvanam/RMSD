@@ -71,7 +71,7 @@ DECLARE
         STORE_OWNER.product_type('Pan', 'Kitchen', 2)
     );
 BEGIN
-    STORE_OWNER.process_products(pi_products=>v_products, pi_customer_email=>'alice.j22@example.com', pi_employee_email=>'thomas@email.com');
+    STORE_OWNER.process_products(pi_products=>v_products, pi_customer_email=>'robert.brown@example.com', pi_employee_email=>'thomas@email.com');
 END;
 /
 
@@ -95,7 +95,7 @@ DECLARE
         STORE_OWNER.product_type('Milk', 'Groceries', 4)
     );
 BEGIN
-    STORE_OWNER.process_products(pi_products=>v_products, pi_customer_email=>'alice.j22@example.com', pi_employee_email=>'bobby@email.com');
+    STORE_OWNER.process_products(pi_products=>v_products, pi_customer_email=>'emily.clark@example.com', pi_employee_email=>'bobby@email.com');
 END;
 /
 
