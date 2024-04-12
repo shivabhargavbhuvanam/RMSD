@@ -716,7 +716,7 @@ BEGIN
     END IF;
 
     -- Check if customer already exists
-    SELECT COUNT(*) INTO v_customer_count FROM CUSTOMER WHERE EMAIL = pi_email;
+    SELECT COUNT(*) INTO v_customer_count FROM CUSTOMER WHERE LOWER(EMAIL) = LOWER(pi_email);
     IF v_customer_count > 0 THEN
         RAISE customer_exists;
     END IF;
