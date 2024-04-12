@@ -167,9 +167,16 @@ FROM Product p;
 -- View for Low Stock
 -- Assuming 'low stock' is defined as fewer than 10 units
 CREATE OR REPLACE VIEW Low_Stock AS
-SELECT p.PRODUCT_ID, INITCAP(p.NAME) as PRODUCT_NAME, p.REMAINING_UNITS
-FROM Product p
-WHERE p.REMAINING_UNITS < 10;
+SELECT 
+    p.PRODUCT_ID, 
+    INITCAP(p.NAME) AS PRODUCT_NAME, 
+    p.REMAINING_UNITS
+FROM 
+    Product p
+WHERE 
+    (p.SELLING_PRICE < 15 AND p.REMAINING_UNITS < 50) OR
+    (p.SELLING_PRICE BETWEEN 15 AND 100 AND p.REMAINING_UNITS < 20) OR
+    (p.SELLING_PRICE > 100 AND p.REMAINING_UNITS < 10);
 
 -- View for Product Sales
 CREATE OR REPLACE VIEW Product_Sales AS
