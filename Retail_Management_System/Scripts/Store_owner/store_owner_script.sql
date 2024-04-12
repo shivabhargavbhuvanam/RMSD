@@ -588,7 +588,7 @@ BEGIN
         RAISE invalid_input;
     END IF;
 
-    SELECT COUNT(*) INTO v_vendor_count FROM VENDOR WHERE EMAIL = pi_email;
+    SELECT COUNT(*) INTO v_vendor_count FROM VENDOR WHERE LOWER(EMAIL) = LOWER(pi_email);
     IF v_vendor_count > 0 THEN
         RAISE vendor_exists;
     END IF;
