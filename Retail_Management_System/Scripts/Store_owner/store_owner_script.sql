@@ -910,15 +910,28 @@ GRANT EXECUTE ON PROCESS_PURCHASE TO inventory_clerk_role;
 CREATE OR REPLACE PROCEDURE ADD_PRODUCT (
     p_category IN Product.CATEGORY%TYPE,
     p_name IN Product.NAME%TYPE,
-    p_remaining_units IN Product.REMAINING_UNITS%TYPE,
     p_selling_price IN Product.SELLING_PRICE%TYPE
 ) AS
+    v_product_count NUMBER;
+    e_product_exists EXCEPTION;
 BEGIN
+
+    SELECT COUNT(*) INTO v_product_count FROM PRODUCT WHERE LOWER(p_name) = LOWER(NAME) AND LOWER(p_category) = LOWER(CATEGORY);
+    
+    IF v_product_count > 0 THEN
+        DBMS_OUTPUT.PUT_LINE('Product exists with name:' ||  p_name || ' and category:' || p_category);
+        RAISE e_product_exists;
+    END IF;
+
     INSERT INTO Product (CATEGORY, NAME, REMAINING_UNITS, SELLING_PRICE) 
-    VALUES (p_category, p_name, p_remaining_units, p_selling_price);
+    VALUES (p_category, p_name, 0, p_selling_price);
 
     COMMIT;
 EXCEPTION
+    
+    WHEN e_product_exists THEN
+        DBMS_OUTPUT.PUT_LINE('Cannot duplicate product');
+
     WHEN OTHERS THEN
         ROLLBACK;
         RAISE; -- Re-raise the exception for further handling or logging
@@ -931,7 +944,6 @@ BEGIN
     ADD_PRODUCT(
         p_category => 'Clothing',
         p_name => 'T-Shirt',
-        p_remaining_units => 150,
         p_selling_price => 19.99
     );
 END;
@@ -941,7 +953,6 @@ BEGIN
     ADD_PRODUCT(
         p_category => 'Groceries',
         p_name => 'Milk',
-        p_remaining_units => 200,
         p_selling_price => 2.99
     );
 END;
@@ -951,7 +962,6 @@ BEGIN
     ADD_PRODUCT(
         p_category => 'Cosmetics',
         p_name => 'Retinoid',
-        p_remaining_units => 150,
         p_selling_price => 9.99
     );
 END;
@@ -961,7 +971,6 @@ BEGIN
     ADD_PRODUCT(
         p_category => 'Shoes',
         p_name => 'Nike',
-        p_remaining_units => 50,
         p_selling_price => 39.99
     );
 END;
@@ -971,7 +980,6 @@ BEGIN
     ADD_PRODUCT(
         p_category => 'Electronics',
         p_name => 'Smartphone',
-        p_remaining_units => 50,
         p_selling_price => 299.99
     );
 END;
