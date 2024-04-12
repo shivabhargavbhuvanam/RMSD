@@ -306,7 +306,7 @@ GRANT accountant_role TO accountant;
 CREATE OR REPLACE FUNCTION VALIDATE_EMAIL(p_email IN VARCHAR2) RETURN BOOLEAN IS
 BEGIN
     -- Check if the email is non-empty and contains '@' and '.'
-    IF p_email IS NOT NULL AND INSTR(p_email, '@') > 1 AND INSTR(p_email, '.', INSTR(p_email, '@')) > INSTR(p_email, '@') + 1 THEN
+    IF p_email IS NOT NULL AND INSTR(lower(p_email), '@') > 1 AND INSTR(lower(p_email), '.', INSTR(lower(p_email), '@')) > INSTR(lower(p_email), '@') + 1 THEN
         RETURN TRUE; -- Valid Email
     ELSE
         RETURN FALSE; -- Invalid Email
