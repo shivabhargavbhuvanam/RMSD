@@ -1967,3 +1967,180 @@ select c.customer_id, (c.first_name || ' ' || c.last_name) as Customer, o.order_
     
 GRANT SELECT ON customers_orders_overview TO SALES_REP_ROLE;
 GRANT SELECT ON customers_orders_overview  TO MANAGER_ROLE;
+
+
+CREATE OR REPLACE PROCEDURE GET_WEEKLY_BEST_SELLER_REPORT(
+    p_start_date DATE
+) IS
+    v_weekly_sales_cursor SYS_REFCURSOR;
+    v_product_id NUMBER;
+    v_product_name VARCHAR2(100);
+    v_week_start_date DATE;
+    v_total_units_sold NUMBER;
+    v_total_revenue NUMBER;
+BEGIN
+    OPEN v_weekly_sales_cursor FOR
+        WITH WeeklySales AS (
+            SELECT 
+                p.PRODUCT_ID, 
+                p.NAME AS PRODUCT_NAME, 
+                TRUNC(o.ORDER_DATE, 'WW') AS WEEK_START_DATE,
+                SUM(i.UNITS) AS TOTAL_UNITS_SOLD, 
+                SUM(i.UNITS * i.SELLING_PRICE) AS TOTAL_REVENUE,
+                RANK() OVER (PARTITION BY TRUNC(o.ORDER_DATE, 'WW') ORDER BY SUM(i.UNITS) DESC) AS UNIT_RANK
+            FROM 
+                ITEM_ORDERS i
+            JOIN 
+                ORDERS o ON i.ORDER_ID = o.ORDER_ID
+            JOIN 
+                PRODUCT p ON i.PRODUCT_ID = p.PRODUCT_ID
+            WHERE 
+                o.ORDER_DATE >= p_start_date
+            GROUP BY 
+                p.PRODUCT_ID, p.NAME, TRUNC(o.ORDER_DATE, 'WW')
+        )
+        SELECT 
+            PRODUCT_ID,
+            PRODUCT_NAME,
+            WEEK_START_DATE,
+            TOTAL_UNITS_SOLD,
+            TOTAL_REVENUE
+        FROM 
+            WeeklySales
+        WHERE 
+            UNIT_RANK = 1;
+
+    LOOP
+        FETCH v_weekly_sales_cursor INTO v_product_id, v_product_name, v_week_start_date, v_total_units_sold, v_total_revenue;
+        EXIT WHEN v_weekly_sales_cursor%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE('Week Start Date: ' || TO_CHAR(v_week_start_date, 'YYYY-MM-DD') || 
+                             ', Product ID: ' || v_product_id || 
+                             ', Product Name: ' || v_product_name || 
+                             ', Total Units Sold: ' || v_total_units_sold || 
+                             ', Total Revenue: ' || v_total_revenue);
+    END LOOP;
+
+    CLOSE v_weekly_sales_cursor;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error in GET_WEEKLY_BEST_SELLER_REPORT: ' || SQLERRM);
+END GET_WEEKLY_BEST_SELLER_REPORT;
+/
+
+
+CREATE OR REPLACE PROCEDURE GET_MONTHLY_BEST_SELLER_REPORT(
+    p_start_date DATE
+) IS
+    v_monthly_sales_cursor SYS_REFCURSOR;
+    v_product_id NUMBER;
+    v_product_name VARCHAR2(100);
+    v_month_start_date DATE;
+    v_total_units_sold NUMBER;
+    v_total_revenue NUMBER;
+BEGIN
+    OPEN v_monthly_sales_cursor FOR
+        WITH MonthlySales AS (
+            SELECT 
+                p.PRODUCT_ID, 
+                p.NAME AS PRODUCT_NAME, 
+                TRUNC(o.ORDER_DATE, 'MM') AS MONTH_START_DATE,
+                SUM(i.UNITS) AS TOTAL_UNITS_SOLD, 
+                SUM(i.UNITS * i.SELLING_PRICE) AS TOTAL_REVENUE,
+                RANK() OVER (PARTITION BY TRUNC(o.ORDER_DATE, 'MM') ORDER BY SUM(i.UNITS) DESC) AS UNIT_RANK
+            FROM 
+                ITEM_ORDERS i
+            JOIN 
+                ORDERS o ON i.ORDER_ID = o.ORDER_ID
+            JOIN 
+                PRODUCT p ON i.PRODUCT_ID = p.PRODUCT_ID
+            WHERE 
+                o.ORDER_DATE >= p_start_date
+            GROUP BY 
+                p.PRODUCT_ID, p.NAME, TRUNC(o.ORDER_DATE, 'MM')
+        )
+        SELECT 
+            PRODUCT_ID,
+            PRODUCT_NAME,
+            MONTH_START_DATE,
+            TOTAL_UNITS_SOLD,
+            TOTAL_REVENUE
+        FROM 
+            MonthlySales
+        WHERE 
+            UNIT_RANK = 1;
+
+    LOOP
+        FETCH v_monthly_sales_cursor INTO v_product_id, v_product_name, v_month_start_date, v_total_units_sold, v_total_revenue;
+        EXIT WHEN v_monthly_sales_cursor%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE('Month Start Date: ' || TO_CHAR(v_month_start_date, 'YYYY-MM') || 
+                             ' Product ID: ' || v_product_id || 
+                             ' Product Name: ' || v_product_name || 
+                             ' Total Units Sold: ' || v_total_units_sold || 
+                             ' Total Revenue: ' || v_total_revenue);
+    END LOOP;
+
+    CLOSE v_monthly_sales_cursor;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error in GET_MONTHLY_BEST_SELLER_REPORT: ' || SQLERRM);
+END GET_MONTHLY_BEST_SELLER_REPORT;
+/
+
+
+CREATE OR REPLACE PROCEDURE GET_YEARLY_BEST_SELLER_REPORT(
+    p_start_date DATE
+) IS
+    v_yearly_sales_cursor SYS_REFCURSOR;
+    v_product_id NUMBER;
+    v_product_name VARCHAR2(100);
+    v_year_start_date DATE;
+    v_total_units_sold NUMBER;
+    v_total_revenue NUMBER;
+BEGIN
+    OPEN v_yearly_sales_cursor FOR
+        WITH YearlySales AS (
+            SELECT 
+                p.PRODUCT_ID, 
+                p.NAME AS PRODUCT_NAME, 
+                TRUNC(o.ORDER_DATE, 'YYYY') AS YEAR_START_DATE,
+                SUM(i.UNITS) AS TOTAL_UNITS_SOLD, 
+                SUM(i.UNITS * i.SELLING_PRICE) AS TOTAL_REVENUE,
+                RANK() OVER (PARTITION BY TRUNC(o.ORDER_DATE, 'YYYY') ORDER BY SUM(i.UNITS) DESC) AS UNIT_RANK
+            FROM 
+                ITEM_ORDERS i
+            JOIN 
+                ORDERS o ON i.ORDER_ID = o.ORDER_ID
+            JOIN 
+                PRODUCT p ON i.PRODUCT_ID = p.PRODUCT_ID
+            WHERE 
+                o.ORDER_DATE >= p_start_date
+            GROUP BY 
+                p.PRODUCT_ID, p.NAME, TRUNC(o.ORDER_DATE, 'YYYY')
+        )
+        SELECT 
+            PRODUCT_ID,
+            PRODUCT_NAME,
+            YEAR_START_DATE,
+            TOTAL_UNITS_SOLD,
+            TOTAL_REVENUE
+        FROM 
+            YearlySales
+        WHERE 
+            UNIT_RANK = 1;
+
+    LOOP
+        FETCH v_yearly_sales_cursor INTO v_product_id, v_product_name, v_year_start_date, v_total_units_sold, v_total_revenue;
+        EXIT WHEN v_yearly_sales_cursor%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE('Year Start Date: ' || TO_CHAR(v_year_start_date, 'YYYY') || 
+                             ' Product ID: ' || v_product_id || 
+                             ' Product Name: ' || v_product_name || 
+                             ' Total Units Sold: ' || v_total_units_sold || 
+                             ' Total Revenue: ' || v_total_revenue);
+    END LOOP;
+
+    CLOSE v_yearly_sales_cursor;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error in GET_YEARLY_BEST_SELLER_REPORT: ' || SQLERRM);
+END GET_YEARLY_BEST_SELLER_REPORT;
+/
