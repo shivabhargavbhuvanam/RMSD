@@ -1937,7 +1937,7 @@ EXCEPTION
 
 END;
 /
-
+grant execute on update_purchase to inventory_clerk_role;
 
 CREATE OR REPLACE VIEW PRODUCT_OVERVIEW AS 
 SELECT 
