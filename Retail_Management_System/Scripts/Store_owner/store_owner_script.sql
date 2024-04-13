@@ -2240,6 +2240,7 @@ CREATE OR REPLACE PACKAGE REPORTS_PACKAGE AS
     PROCEDURE GET_QUARTERLY_PURCHASES_REPORT(p_year IN NUMBER);
     PROCEDURE GET_QUARTERLY_SALES_REPORT(p_year IN NUMBER);
     PROCEDURE GET_TOP_CUSTOMERS_BY_QUARTER(p_year IN NUMBER);
+    PROCEDURE GET_PRODUCT_HISTORY_REPORT_PROCEDURE;
 END REPORTS_PACKAGE;
 /
 
@@ -2443,6 +2444,55 @@ CREATE OR REPLACE PACKAGE BODY REPORTS_PACKAGE AS
             DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
         END LOOP;
     END GET_TOP_CUSTOMERS_BY_QUARTER;
+
+    PROCEDURE GET_PRODUCT_HISTORY_REPORT_PROCEDURE
+    IS
+        -- Declare variables to store query results
+        v_product_id PRODUCT_HISTORY.PRODUCT_ID%TYPE;
+        v_name PRODUCT.NAME%TYPE;
+        v_category PRODUCT.CATEGORY%TYPE;
+        v_during_the_price PRODUCT_HISTORY.UPDATED_PRICE%TYPE;
+        v_total_units NUMBER;
+        v_revenue NUMBER;
+
+        -- Cursor to fetch the results
+        CURSOR c_product_history IS
+            SELECT
+                PH.PRODUCT_ID,
+                P.NAME,
+                P.CATEGORY,
+                PH.UPDATED_PRICE AS DURING_THE_PRICE,
+                NVL(SUM(IO.UNITS), 0) AS TOTAL_UNITS,
+                NVL(SUM(IO.UNITS * IO.SELLING_PRICE), 0) AS REVENUE
+            FROM
+                PRODUCT_HISTORY PH
+            LEFT OUTER JOIN
+                ITEM_ORDERS IO ON PH.PRODUCT_ID = IO.PRODUCT_ID AND PH.UPDATED_PRICE = IO.SELLING_PRICE
+            INNER JOIN
+                PRODUCT P ON PH.PRODUCT_ID = P.PRODUCT_ID
+            GROUP BY
+                PH.PRODUCT_ID, P.NAME, P.CATEGORY, PH.UPDATED_PRICE
+            ORDER BY
+                PH.PRODUCT_ID, REVENUE DESC;
+
+    BEGIN
+        DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+        DBMS_OUTPUT.PUT_LINE('Product price wise sales');
+        -- Open the cursor and fetch the results
+        FOR rec IN c_product_history LOOP
+            -- Assign values to variables
+            v_product_id := rec.PRODUCT_ID;
+            v_name := rec.NAME;
+            v_category := rec.CATEGORY;
+            v_during_the_price := rec.DURING_THE_PRICE;
+            v_total_units := rec.TOTAL_UNITS;
+            v_revenue := rec.REVENUE;
+
+            -- Display the result
+            DBMS_OUTPUT.PUT_LINE('Product ID: ' || v_product_id || ', Name: ' || v_name ||  ', During Price: ' || v_during_the_price || ', Total Units: ' || v_total_units || ', Revenue: $' || v_revenue);
+        END LOOP;
+        DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+    END GET_PRODUCT_HISTORY_REPORT_PROCEDURE;   
 
 END REPORTS_PACKAGE;
 /
