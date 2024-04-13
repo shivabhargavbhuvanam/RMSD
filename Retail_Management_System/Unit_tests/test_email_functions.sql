@@ -28,7 +28,7 @@ END;
 
 
 CREATE OR REPLACE PROCEDURE TEST_EMAIL_EXISTS IS
-  v_test_existing_email VARCHAR2(100) := 'known_email@example.com'; -- Replace with an existing email in your test database
+  v_test_existing_email VARCHAR2(100) := 'john.doe@example.com'; -- Replace with an existing email in your test database
   v_test_non_existing_email VARCHAR2(100) := 'non_existing_email@example.com';
 
   PROCEDURE assert(condition IN BOOLEAN, message IN VARCHAR2) IS
