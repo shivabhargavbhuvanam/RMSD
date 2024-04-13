@@ -734,7 +734,8 @@ CREATE OR REPLACE PROCEDURE ADD_CUSTOMER_RECORD(
     pi_city           IN ADDRESS.CITY%TYPE,
     pi_state          IN ADDRESS.STATE%TYPE,
     pi_country        IN ADDRESS.COUNTRY%TYPE,
-    pi_postal_code    IN ADDRESS.POSTAL_CODE%TYPE
+    pi_postal_code    IN ADDRESS.POSTAL_CODE%TYPE,
+    po_result         OUT VARCHAR2
 )
 AS
     v_address_id ADDRESS.ADDRESS_ID%TYPE;
@@ -757,30 +758,57 @@ BEGIN
     END IF;
 
     -- Insert into Address table
-    INSERT INTO ADDRESS (HOUSE_NUMBER, STREET, CITY, STATE, COUNTRY, POSTAL_CODE)
-    VALUES (pi_house_number, pi_street, pi_city, pi_state, pi_country, pi_postal_code)
-    RETURNING ADDRESS_ID INTO v_address_id;
+    INSERT INTO ADDRESS (
+        HOUSE_NUMBER, 
+        STREET, 
+        CITY, 
+        STATE, 
+        COUNTRY, 
+        POSTAL_CODE
+    ) VALUES (
+        pi_house_number, 
+        pi_street, 
+        pi_city, 
+        pi_state, 
+        pi_country, 
+        pi_postal_code
+    ) RETURNING ADDRESS_ID INTO v_address_id;
 
     -- Insert into Customer table
-    INSERT INTO CUSTOMER (FIRST_NAME, LAST_NAME, ADDRESS_ID, PHONE_NUMBER, EMAIL)
-    VALUES (pi_first_name, pi_last_name, v_address_id, pi_phone, pi_email);
+    INSERT INTO CUSTOMER (
+        FIRST_NAME, 
+        LAST_NAME, 
+        ADDRESS_ID, 
+        PHONE_NUMBER, 
+        EMAIL
+    ) VALUES (
+        pi_first_name, 
+        pi_last_name, 
+        v_address_id, 
+        pi_phone, 
+        pi_email
+    );
 
+    -- If all operations are successful
+    po_result := 'Customer record added successfully';
+    DBMS_OUTPUT.PUT_LINE(po_result);
     COMMIT;
-    DBMS_OUTPUT.PUT_LINE('Customer record added successfully');
 
 EXCEPTION
     WHEN invalid_input THEN
         ROLLBACK;
-        DBMS_OUTPUT.PUT_LINE('Error: Invalid input arguments');
+        po_result := 'Error: Invalid input arguments';
+        DBMS_OUTPUT.PUT_LINE(po_result);
     WHEN customer_exists THEN
         ROLLBACK;
-        DBMS_OUTPUT.PUT_LINE('Error: Customer with the same email already exists');
+        po_result := 'Error: Customer with the same email already exists';
+        DBMS_OUTPUT.PUT_LINE(po_result);
     WHEN OTHERS THEN
         ROLLBACK;
-        DBMS_OUTPUT.PUT_LINE(SQLERRM); -- Display the specific SQL error
+        po_result := SQLERRM; -- Display the specific SQL error
+        DBMS_OUTPUT.PUT_LINE('Unexpected Error: ' || po_result);
 END ADD_CUSTOMER_RECORD;
 /
-
 
 -- Grant execute permission to appropriate roles or users
 GRANT EXECUTE ON ADD_CUSTOMER_RECORD TO manager_role;
