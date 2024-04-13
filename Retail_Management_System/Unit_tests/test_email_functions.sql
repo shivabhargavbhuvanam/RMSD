@@ -28,7 +28,8 @@ END;
 
 
 CREATE OR REPLACE PROCEDURE TEST_EMAIL_EXISTS IS
-  v_test_existing_email VARCHAR2(100) := 'john.doe@example.com'; -- Replace with an existing email in your test database
+  v_test_existing_email VARCHAR2(100) := 'janesmith@email.com'; -- Replace with an existing email in your test database
+  v_test_existing_email_case_insensitive VARCHAR2(100) := 'JaNeSmith@eMail.com'; -- Replace with an existing email in your test database
   v_test_non_existing_email VARCHAR2(100) := 'non_existing_email@example.com';
 
   PROCEDURE assert(condition IN BOOLEAN, message IN VARCHAR2) IS
@@ -43,6 +44,9 @@ CREATE OR REPLACE PROCEDURE TEST_EMAIL_EXISTS IS
 BEGIN
   -- Test with an existing email
   assert(EMAIL_EXISTS(v_test_existing_email, 'CUSTOMER') = 1, 'Existing email test');
+  
+  -- Test with a non-existing email
+  assert(EMAIL_EXISTS(v_test_existing_email_case_insensitive, 'CUSTOMER') = 1, 'Existing email test');
 
   -- Test with a non-existing email
   assert(EMAIL_EXISTS(v_test_non_existing_email, 'CUSTOMER') = 0, 'Non-existing email test');
