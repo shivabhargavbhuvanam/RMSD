@@ -781,7 +781,6 @@ EXCEPTION
 END ADD_CUSTOMER_RECORD;
 /
 
-
 -- Grant execute permission to appropriate roles or users
 GRANT EXECUTE ON ADD_CUSTOMER_RECORD TO manager_role;
 GRANT EXECUTE ON ADD_CUSTOMER_RECORD TO sales_rep_role;
